@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Туда-сюда">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180x180.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="apple-touch-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="apple-touch-icon-120x120.png">
+  <link rel="apple-touch-icon" sizes="76x76" href="apple-touch-icon-76x76.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <title>Туда-сюда</title>
+  <meta name="description" content="Календарь планов и идей">
+  <meta property="og:title" content="Туда-сюда">
+  <meta property="og:description" content="Посмотри, что запланировано!">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f4c5.png">
+  <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoi0KLQvtGA0LPQvtC90YsiLCJzaG9ydF9uYW1lIjoi0KLQvtGA0LPQvtC90YsiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2YwZjBmMCIsInRoZW1lX2NvbG9yIjoiIzY2N2VlYSJ9">
+
+  <!-- ============================================ -->
+  <!-- === CSS === -->
+  <!-- ============================================ -->
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-text-size-adjust: 100%; }
+
+    html, body {
+      width: 100% !important; height: 100% !important;
+      min-width: 100% !important; min-height: 100% !important;
+      overflow: hidden !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f0f0f0; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    }
+
+    #app {
+      display: flex; flex-direction: column;
+      width: 100% !important; height: 100% !important;
+      overflow: hidden; background: #f0f0f0;
+    }
+
+    /* === ШАПКА === */
+    .header {
+      flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 12px;
+      padding-top: max(6px, env(safe-area-inset-top));
+      background: #ffffff; border-bottom: 1px solid #e8e8e8; z-index: 100;
+      min-height: 44px;
+    }
+    .header h1 { font-size: 16px; font-weight: 700; color: #333; }
+    .header-actions { display: flex; gap: 6px; align-items: center; }
+    .btn-add { display: none; }
+    .view-ideas-active .btn-add { display: block; }
+
+    .btn-add {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; border: none; padding: 6px 12px; border-radius: 16px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3); transition: transform 0.2s; white-space: nowrap;
+      line-height: 1.3;
+    }
+    .btn-add:active { transform: scale(0.95); }
+    .btn-sync {
+      background: none; color: #667eea; border: none; width: 40px; height: 40px;
+      border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: transform 0.2s; flex-shrink: 0; padding: 0;
+    }
+    .btn-sync:active { transform: scale(0.95); }
+    .btn-sync.spin { animation: spin 1s linear infinite; }
+    .btn-sync svg { width: 24px; height: 24px; pointer-events: none; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    /* === НАВИГАЦИЯ ПО МЕСЯЦАМ === */
+    .month-nav {
+      flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 12px; background: #ffffff; border-bottom: 1px solid #e8e8e8; z-index: 100;
+      min-height: 36px;
+    }
+    .month-nav.hidden { display: none; }
+    .month-nav button {
+      background: none; border: none; color: #667eea; font-size: 12px; font-weight: 600;
+      cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; touch-action: manipulation;
+    }
+    .month-nav button:active { background: #f0f0f0; }
+    .month-title { font-size: 14px; font-weight: 700; color: #333; text-transform: capitalize; }
+
+    /* === КАЛЕНДАРЬ === */
+    #view-calendar {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #ffffff;
+    }
+    .weekdays-header {
+      flex-shrink: 0; display: grid; grid-template-columns: repeat(7, 1fr); text-align: center;
+      padding: 6px 0; background: #fafafa; border-bottom: 1px solid #e8e8e8;
+    }
+    .weekday-label { font-size: 10px; font-weight: 700; color: #666; text-transform: uppercase; }
+    .weekday-label.weekend { color: #e74c3c; }
+
+    .calendar-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .week-row {
+      flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); min-height: 0; border-bottom: 1px solid #f0f0f0;
+    }
+    .week-row:last-child { border-bottom: none; }
+
+    .day-cell {
+      border-right: 1px solid #f0f0f0; padding: 3px 2px; min-height: 0;
+      display: flex; flex-direction: column; overflow: hidden; cursor: pointer;
+      transition: background 0.15s; position: relative;
+    }
+    .day-cell:hover { background: rgba(102, 126, 234, 0.08); }
+    .day-cell .add-hover {
+      display: none; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); font-size: 28px; font-weight: 300;
+      color: rgba(102, 126, 234, 0.35); pointer-events: none; z-index: 10; line-height: 1;
+    }
+    .day-cell:hover .add-hover { display: flex; align-items: center; justify-content: center; }
+    .day-cell:hover .day-events { opacity: 0.3; }
+    .day-cell:hover .day-number { opacity: 0.3; }
+    .day-cell.other-month:hover .add-hover { color: rgba(150, 150, 150, 0.25); }
+    .day-cell:last-child { border-right: none; }
+    .day-cell:active { background: #f5f5f5; }
+    .day-cell.other-month { background: #fafafa; }
+    .day-cell.other-month .day-number { color: #ccc; }
+    .day-cell.today { background: #e8f4fd; }
+
+    .day-number {
+      font-size: 12px; font-weight: 700; color: #333; width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center; border-radius: 50%;
+      margin-bottom: 1px; flex-shrink: 0;
+    }
+    .day-cell.today .day-number { background: #667eea; color: white; }
+    .day-cell.weekend .day-number { color: #e74c3c; }
+    .day-cell.today.weekend .day-number { color: white; }
+
+    .day-events {
+      flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; min-height: 0;
+    }
+    .event-chip {
+      font-size: 8px; padding: 2px 4px; border-radius: 3px; overflow: hidden;
+      text-overflow: ellipsis; cursor: pointer; font-weight: 500; line-height: 1.2;
+    }
+    .event-chip b { font-weight: 700; font-size: 9px; }
+    .event-chip.past { opacity: 0.5; text-decoration: line-through; }
+    .event-chip.more { background: #f0f0f0; color: #888; text-align: center; font-size: 7px; font-weight: 700; }
+
+    .cat-excursions { background: #e8f5e9; color: #2e7d32; }
+    .cat-food { background: #fff8e1; color: #f57f17; }
+    .cat-exhibitions { background: #e3f2fd; color: #1565c0; }
+    .cat-concerts { background: #fce4ec; color: #c62828; }
+    .cat-movies { background: #f3e5f5; color: #6a1b9a; }
+    .cat-other { background: #eceff1; color: #455a64; }
+    .cat-custom { background: #f5f5f5; color: #666; }
+
+    /* === ИДЕИ === */
+    #view-ideas { flex: 1; display: none; flex-direction: column; overflow: hidden; background: #ffffff; }
+    #view-ideas.active { display: flex; }
+
+    .ideas-filter {
+      flex-shrink: 0; display: flex; gap: 6px; padding: 8px 12px; overflow-x: auto;
+      background: #fafafa; border-bottom: 1px solid #e8e8e8; -webkit-overflow-scrolling: touch;
+    }
+    .filter-chip {
+      flex-shrink: 0; padding: 5px 10px; border-radius: 14px; font-size: 11px; font-weight: 600;
+      cursor: pointer; border: 2px solid transparent; transition: all 0.2s; background: white; touch-action: manipulation;
+    }
+    .filter-chip.active { border-color: #667eea; background: #667eea; color: white; }
+    .filter-chip:not(.active) { border-color: #e0e0e0; color: #666; }
+    .filter-chip[data-filter="excursions"]:not(.active) { background: #e8f5e9; color: #2e7d32; border-color: #e8f5e9; }
+    .filter-chip[data-filter="food"]:not(.active) { background: #fff8e1; color: #f57f17; border-color: #fff8e1; }
+    .filter-chip[data-filter="exhibitions"]:not(.active) { background: #e3f2fd; color: #1565c0; border-color: #e3f2fd; }
+    .filter-chip[data-filter="concerts"]:not(.active) { background: #fce4ec; color: #c62828; border-color: #fce4ec; }
+    .filter-chip[data-filter="movies"]:not(.active) { background: #f3e5f5; color: #6a1b9a; border-color: #f3e5f5; }
+    .filter-chip[data-filter="all"]:not(.active) { background: #f5f5f5; color: #666; border-color: #f5f5f5; }
+    
+
+    .ideas-list { flex: 1; overflow-y: auto; padding: 8px 12px; -webkit-overflow-scrolling: touch; }
+    .idea-card {
+      border-radius: 10px; padding: 12px; margin-bottom: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+      position: relative;
+    }
+    .idea-card:active { transform: scale(0.98); box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+    .idea-card.past {
+      opacity: 0.5;
+      text-decoration: line-through;
+      background: #f5f5f5;
+      order: 999;
+    }
+    .idea-card.past .idea-title,
+    .idea-card.past .idea-category,
+    .idea-card.past .idea-date,
+    .idea-card.past .idea-place,
+    .idea-card.past .idea-time {
+      text-decoration: line-through;
+      color: #999;
+    }
+    
+    
+    
+    .idea-title { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 4px; }
+    .idea-meta { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px; }
+    .idea-category {
+      font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px;
+      background: rgba(255,255,255,0.5);
+    }
+    .idea-date { font-size: 10px; font-weight: 500; color: #888; }
+    .idea-place { font-size: 11px; color: #666; margin-top: 4px; width: 100%; }
+    .idea-place a { color: inherit; text-decoration: none; }
+    .idea-place a:hover { text-decoration: underline; }
+    .idea-time { font-size: 10px; color: #888; margin-top: 2px; }
+    .idea-author { font-size: 10px; color: #999; margin-top: 4px; }
+    .delete-btn {
+      position: absolute;
+      right: 6px;
+      bottom: 6px;
+      background: none;
+      border: none;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 2px;
+      opacity: 0.4;
+      transition: opacity 0.2s;
+      z-index: 5;
+    }
+    .delete-btn:hover { opacity: 0.8; }
+    .idea-card.past .delete-btn { display: none; }
+
+    .empty-state { text-align: center; padding: 40px 16px; color: #aaa; }
+    .empty-state-icon { font-size: 36px; margin-bottom: 8px; }
+    .empty-state-text { font-size: 13px; font-weight: 500; }
+
+    /* === НИЖНЯЯ НАВИГАЦИЯ === */
+    .bottom-nav {
+      flex-shrink: 0; display: flex; justify-content: space-around; align-items: center;
+      background: #ffffff; border-top: 1px solid #e8e8e8; padding: 4px 0;
+      padding-bottom: max(4px, env(safe-area-inset-bottom)); z-index: 100;
+    }
+    .refresh-btn {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: #6B7280;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.7);
+      transition: background .25s ease, color .25s ease, transform .25s ease, box-shadow .25s ease;
+      flex-shrink: 0; padding: 0; margin: 0;
+    }
+    .refresh-btn:hover {
+      background: rgba(255,255,255,.92);
+      color: #3B82F6;
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.9);
+    }
+    .refresh-btn:active { transform: scale(.94); }
+    .refresh-btn.spin svg { animation: refreshSpin .6s ease; }
+    @keyframes refreshSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .view-switcher {
+      flex-shrink: 0; display: flex; justify-content: center; align-items: center;
+      gap: 8px; padding: 6px 12px; background: #ffffff;
+      border-top: 1px solid #e8e8e8; z-index: 100;
+    }
+    .year-view .weekdays-header { display: none; }
+    .view-switcher.hidden { display: none; }
+    .view-btn {
+      background: none; border: 2px solid #e0e0e0; color: #666;
+      padding: 4px 14px; border-radius: 14px; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; touch-action: manipulation;
+    }
+    .view-btn.active { border-color: #667eea; background: #667eea; color: white; }
+    .nav-tab {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      background: none; border: none; padding: 5px 20px; cursor: pointer;
+      color: #aaa; transition: color 0.2s; touch-action: manipulation;
+    }
+    .nav-tab.active { color: #667eea; }
+    .nav-tab .icon { font-size: 18px; line-height: 1; }
+    .nav-tab .label { font-size: 9px; font-weight: 600; }
+
+    /* === МОДАЛЬНОЕ ОКНО === */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4); z-index: 1000; justify-content: center; align-items: flex-end;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .modal-overlay.show { display: flex; opacity: 1; }
+    .modal-sheet {
+      background: white; width: 100%; max-height: 85vh; border-radius: 20px 20px 0 0;
+      overflow-y: auto; padding: 16px;
+      transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .modal-sheet::-webkit-scrollbar { width: 6px; }
+    .modal-sheet::-webkit-scrollbar-track { background: transparent; margin: 8px 0; }
+    .modal-sheet::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+    .modal-sheet::-webkit-scrollbar-thumb:hover { background: #bbb; }
+    @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+    @keyframes toastOut { from { opacity:1; transform:translateX(-50%) translateY(0); } to { opacity:0; transform:translateX(-50%) translateY(20px); } }
+    .modal-overlay.show .modal-sheet { transform: translateY(0); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal-title { font-size: 17px; font-weight: 700; color: #333; }
+    .modal-close {
+      background: none; border: none; font-size: 22px; color: #aaa; cursor: pointer;
+      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; touch-action: manipulation;
+    }
+    .modal-close:active { background: #f0f0f0; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; }
+    .form-input, .form-select, .form-textarea {
+      width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 10px;
+      font-size: 14px; font-family: inherit; background: #fafafa; transition: border-color 0.2s; -webkit-appearance: none;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #667eea; background: white; }
+    .form-textarea { min-height: 60px; resize: vertical; }
+
+    .category-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .cat-option {
+      padding: 8px; border-radius: 8px; text-align: center; font-size: 11px; font-weight: 600;
+      cursor: pointer; border: 2px solid transparent; transition: all 0.2s; touch-action: manipulation;
+      position: relative; overflow: hidden;
+    }
+    .cat-option.selected { border-color: #667eea; box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2); }
+    
+    
+
+    /* === ВЫБОР АВТОРА === */
+    .author-options { display: flex; gap: 8px; }
+    .author-option {
+      flex: 1; padding: 8px; border-radius: 8px; text-align: center;
+      font-size: 12px; font-weight: 600; cursor: pointer; border: 2px solid #e0e0e0;
+      background: white; color: #666; transition: all 0.2s; touch-action: manipulation;
+    }
+    .author-option.selected { border-color: #667eea; background: #667eea; color: white; }
+
+    /* === КАСТОМНАЯ КАТЕГОРИЯ === */
+    .add-category-btn {
+      background: none; border: 1px dashed #667eea; color: #667eea;
+      padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      cursor: pointer; width: 100%; margin-top: 8px;
+    }
+    .custom-category-input {
+      display: none; margin-top: 8px;
+    }
+
+    .btn-submit {
+      width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700;
+      cursor: pointer; margin-top: 4px; transition: transform 0.2s; touch-action: manipulation;
+    }
+    .btn-submit:active { transform: scale(0.98); }
+    .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+    .btn-row .btn-submit { flex: 1; margin-top: 0; }
+    .btn-secondary { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%) !important; }
+    .btn-danger { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important; }
+
+    /* === POPUP ДНЯ === */
+    .day-popup {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4); z-index: 999; justify-content: center; align-items: center; padding: 16px;
+    }
+    .day-popup.show { display: flex; }
+    .day-popup-content {
+      background: white; width: 100%; max-width: 360px; max-height: 70vh;
+      border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;
+    }
+    .day-popup-header {
+      padding: 12px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; display: flex; justify-content: space-between; align-items: center;
+    }
+    .day-popup-title { font-size: 15px; font-weight: 700; }
+    .day-popup-close {
+      background: rgba(255,255,255,0.2); border: none; color: white;
+      width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; touch-action: manipulation;
+    }
+    .day-popup-events { flex: 1; overflow-y: auto; padding: 12px; }
+    .day-popup-event {
+      padding: 10px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid; cursor: pointer;
+    }
+    .day-popup-event-title { font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+    .day-popup-event-time { font-size: 11px; opacity: 0.8; }
+    .day-popup-event-place { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+    .day-popup-event-place a { color: inherit; text-decoration: none; }
+    .day-popup-event-place a:hover { text-decoration: underline; }
+    .day-popup-event-author { font-size: 10px; color: #999; margin-top: 2px; }
+    .day-popup-event-share {
+      margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(0,0,0,0.1);
+      display: flex; justify-content: flex-end;
+    }
+    .day-popup-event-share button {
+      background: none; border: none; font-size: 13px; cursor: pointer;
+      padding: 2px 6px; border-radius: 6px; opacity: 0.6;
+      transition: opacity 0.2s; color: inherit;
+    }
+    .day-popup-event-share button:hover { opacity: 1; background: rgba(0,0,0,0.05); }
+    .day-popup-event-share button.copied { opacity: 1; color: #4caf50; }
+    .day-popup-add { padding: 8px 16px; border-top: 1px solid #f0f0f0; text-align: center; }
+    .day-popup-add-btn {
+      background: none; border: 2px dashed #667eea; color: #667eea; padding: 8px 16px;
+      border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; width: 100%; touch-action: manipulation;
+    }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+
+    /* === ДЕСКТОП === */
+    @media (min-width: 769px) {
+      .header { padding: 8px 16px; padding-top: max(8px, env(safe-area-inset-top)); }
+      .header h1 { font-size: 17px; }
+      .btn-add { font-size: 13px; padding: 7px 14px; }
+      .btn-sync { width: 44px; height: 44px; }
+      .btn-sync svg { width: 28px; height: 28px; }
+      .month-nav { padding: 8px 16px; }
+      .month-nav button { font-size: 14px; }
+      .month-title { font-size: 16px; }
+      .weekday-label { font-size: 11px; }
+      .day-number { font-size: 13px; font-weight: 400; width: 24px; height: 24px; }
+      .day-cell { padding: 4px 3px; }
+      .event-chip { font-size: 10px; padding: 2px 4px; }
+      .event-chip b { font-size: 11px; }
+      .event-chip.past { opacity: 0.5; text-decoration: line-through; }
+      .event-chip.more { font-size: 9px; }
+      .nav-tab .icon { font-size: 20px; }
+      .nav-tab .label { font-size: 10px; }
+      .nav-tab { padding: 6px 24px; }
+      .view-switcher { padding: 8px 16px; }
+      .view-btn { font-size: 13px; padding: 5px 18px; }
+      .bottom-nav { padding: 6px 0; }
+      .modal-title { font-size: 19px; }
+      .modal-close { width: 36px; height: 36px; font-size: 24px; }
+      .form-input, .form-select, .form-textarea { font-size: 16px; padding: 12px 14px; }
+      .form-label { font-size: 13px; }
+      .cat-option { font-size: 12px; padding: 10px; }
+      .btn-submit { font-size: 16px; padding: 14px; }
+      .day-popup-title { font-size: 17px; }
+      .day-popup-event-title { font-size: 14px; }
+      .day-popup-event-time { font-size: 12px; }
+      .day-popup-add-btn { font-size: 13px; }
+      .idea-title { font-size: 15px; }
+      .idea-category { font-size: 11px; }
+      .filter-chip { font-size: 12px; padding: 6px 12px; }
+      .filter-chip[data-filter="excursions"]:not(.active) { background: #e8f5e9; color: #2e7d32; border-color: #e8f5e9; }
+      .filter-chip[data-filter="food"]:not(.active) { background: #fff8e1; color: #f57f17; border-color: #fff8e1; }
+      .filter-chip[data-filter="exhibitions"]:not(.active) { background: #e3f2fd; color: #1565c0; border-color: #e3f2fd; }
+      .filter-chip[data-filter="concerts"]:not(.active) { background: #fce4ec; color: #c62828; border-color: #fce4ec; }
+      .filter-chip[data-filter="movies"]:not(.active) { background: #f3e5f5; color: #6a1b9a; border-color: #f3e5f5; }
+      .filter-chip[data-filter="all"]:not(.active) { background: #f5f5f5; color: #666; border-color: #f5f5f5; }
+    
+      .empty-state-text { font-size: 15px; }
+      .modal-overlay { align-items: center !important; }
+      .modal-sheet { max-width: 420px; border-radius: 16px !important; transform: translateY(20px) !important; }
+      .modal-overlay.show .modal-sheet { transform: translateY(0) !important; }
+      .modal-sheet::-webkit-scrollbar { width: 10px; }
+      .modal-sheet::-webkit-scrollbar-thumb { background: #ccc; border-radius: 5px; border: 2px solid transparent; background-clip: padding-box; }
+      .modal-sheet::-webkit-scrollbar-thumb:hover { background: #999; border: 2px solid transparent; background-clip: padding-box; }
+      .cat-editor-sheet::-webkit-scrollbar { width: 10px; }
+      .cat-editor-sheet::-webkit-scrollbar-thumb { background: #ccc; border-radius: 5px; border: 2px solid transparent; background-clip: padding-box; }
+      .cat-editor-sheet::-webkit-scrollbar-thumb:hover { background: #999; border: 2px solid transparent; background-clip: padding-box; }
+    }
+
+    /* === РЕДАКТОР КАТЕГОРИЙ === */
+    .cat-editor-btn {
+      background: none; border: 1px dashed #999; color: #666;
+      padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 600;
+      cursor: pointer; width: 100%; margin-top: 6px; touch-action: manipulation;
+    }
+    .cat-editor-btn:active { background: #f5f5f5; }
+    .cat-editor-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4); z-index: 1001; justify-content: center; align-items: flex-end;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .cat-editor-overlay.show { display: flex; opacity: 1; }
+    .cat-editor-sheet {
+      background: white; width: 100%; max-height: 80vh; border-radius: 20px 20px 0 0;
+      overflow-y: auto; padding: 16px;
+      transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .cat-editor-sheet::-webkit-scrollbar { width: 6px; }
+    .cat-editor-sheet::-webkit-scrollbar-track { background: transparent; margin: 8px 0; }
+    .cat-editor-sheet::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+    .cat-editor-sheet::-webkit-scrollbar-thumb:hover { background: #bbb; }
+    .cat-editor-overlay.show .cat-editor-sheet { transform: translateY(0); }
+    .cat-editor-list { margin-top: 8px; }
+    .cat-editor-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px;
+      border-radius: 10px; background: #fafafa; margin-bottom: 6px;
+    }
+    .cat-editor-color {
+      width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; cursor: pointer;
+      border: 2px solid transparent; transition: transform 0.15s;
+    }
+    .cat-editor-color:active { transform: scale(0.9); }
+    .cat-editor-name {
+      flex: 1; font-size: 14px; font-weight: 600; color: #333;
+      background: none; border: none; padding: 0;
+    }
+    .cat-editor-name:focus { outline: none; }
+    .cat-editor-actions { display: flex; gap: 4px; }
+    .cat-editor-action {
+      background: none; border: none; font-size: 16px; cursor: pointer;
+      padding: 4px; border-radius: 6px; opacity: 0.6; transition: opacity 0.2s;
+    }
+    .cat-editor-action:hover { opacity: 1; background: rgba(0,0,0,0.05); }
+    .cat-editor-color {
+      position: relative; overflow: hidden; border-radius: 50%; flex-shrink: 0;
+    }
+    .cat-editor-color-input {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0.01; cursor: pointer; border: none; padding: 0; margin: 0;
+      border-radius: 50%;
+    }
+    .cat-editor-new {
+      display: flex; gap: 8px; align-items: center; margin-top: 12px;
+      padding-top: 12px; border-top: 1px solid #eee;
+    }
+  </style>
+  <!-- === КОНЕЦ CSS === -->
+<base target="_blank">
+<base target="_blank">
+<base target="_blank">
+</head>
+<body>
+  <div id="app">
+    <div class="header">
+      <h1>📅</h1>
+      <div class="header-actions">
+        <button class="btn-add" onclick="openModal()">+ Добавить</button>
+      </div>
+    </div>
+
+    <div class="month-nav" id="monthNav">
+      <button onclick="prevMonth()">◀</button>
+      <div class="month-title" id="monthTitle">Июнь 2026</div>
+      <button onclick="nextMonth()">▶</button>
+    </div>
+
+    <div id="view-calendar">
+      <div class="weekdays-header" id="weekdaysHeader">
+        <div class="weekday-label">Пн</div>
+        <div class="weekday-label">Вт</div>
+        <div class="weekday-label">Ср</div>
+        <div class="weekday-label">Чт</div>
+        <div class="weekday-label">Пт</div>
+        <div class="weekday-label weekend">Сб</div>
+        <div class="weekday-label weekend">Вс</div>
+      </div>
+      <div class="calendar-body" id="calendarBody"></div>
+    </div>
+
+    <div id="view-ideas">
+      <div class="ideas-filter" id="ideasFilter">
+        <div class="filter-chip active" onclick="filterIdeas('all')" data-filter="all">Все</div>
+        <div class="filter-chip" onclick="filterIdeas('excursions')" data-filter="excursions">Экскурсии</div>
+        <div class="filter-chip" onclick="filterIdeas('food')" data-filter="food">Покушоц!</div>
+        <div class="filter-chip" onclick="filterIdeas('exhibitions')" data-filter="exhibitions">Выставки</div>
+        <div class="filter-chip" onclick="filterIdeas('concerts')" data-filter="concerts">Концерты</div>
+        <div class="filter-chip" onclick="filterIdeas('movies')" data-filter="movies">Кино</div>
+        <div class="filter-chip" onclick="filterIdeas('other')" data-filter="other">Другое</div>
+      </div>
+      <div class="ideas-list" id="ideasList"></div>
+    </div>
+
+    <div class="view-switcher" id="viewSwitcher">
+      <button class="view-btn active" onclick="switchCalendarView('week')" data-view="week">Неделя</button>
+      <button class="view-btn" onclick="switchCalendarView('month')" data-view="month">Месяц</button>
+      <button class="view-btn" onclick="switchCalendarView('year')" data-view="year">Год</button>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-tab active" onclick="switchView('calendar')" id="tab-calendar">
+        <span class="icon" style="font-size:24px;"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><line x1="8" y1="2.5" x2="8" y2="6"/><line x1="16" y1="2.5" x2="16" y2="6"/><line x1="3" y1="9" x2="21" y2="9"/><circle cx="8" cy="13" r="0.7" fill="currentColor" stroke="none"/><circle cx="12" cy="13" r="0.7" fill="currentColor" stroke="none"/><circle cx="16" cy="13" r="0.7" fill="currentColor" stroke="none"/><circle cx="8" cy="17" r="0.7" fill="currentColor" stroke="none"/><path d="M12 18.3C11.2 17.6 10 16.8 10 15.7C10 14.9 10.6 14.3 11.4 14.3C11.9 14.3 12.3 14.6 12.5 15C12.7 14.6 13.1 14.3 13.6 14.3C14.4 14.3 15 14.9 15 15.7C15 16.8 13.8 17.6 13 18.3Z" fill="#EF4444" stroke="none"/><circle cx="16" cy="17" r="0.7" fill="currentColor" stroke="none"/></svg></span>
+      </button>
+      <button class="refresh-btn" onclick="loadFromSheet()" id="syncBtn" title="Обновить планы">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 2v6h-6"/>
+          <path d="M20.49 9A9 9 0 1 0 21 12"/>
+        </svg>
+      </button>
+      <button class="nav-tab" onclick="switchView('ideas')" id="tab-ideas">
+        <span class="icon" style="font-size:24px;">📌</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Новая запись</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Название</label>
+        <input type="text" class="form-input" id="inputTitle" placeholder="Например: Выставка Ван Гога">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Категория</label>
+        <div class="category-options" id="categoryOptions">
+          <div class="cat-option cat-excursions" data-cat="excursions" onclick="selectCategory(this)">🌲 Экскурсии</div>
+          <div class="cat-option cat-food" data-cat="food" onclick="selectCategory(this)">🍕 Покушоц!</div>
+          <div class="cat-option cat-exhibitions" data-cat="exhibitions" onclick="selectCategory(this)">🎨 Выставки</div>
+          <div class="cat-option cat-concerts" data-cat="concerts" onclick="selectCategory(this)">🎵 Концерты</div>
+          <div class="cat-option cat-movies" data-cat="movies" onclick="selectCategory(this)">🎬 Кино</div>
+          <div class="cat-option cat-other" data-cat="other" onclick="selectCategory(this)">✨ Другое</div>
+        </div>
+        <button type="button" class="add-category-btn" onclick="showCustomCategory()">+ Добавить свою категорию</button>
+        <div class="custom-category-input" id="customCategoryInput">
+          <input type="text" class="form-input" id="inputCustomCategory" placeholder="Например: Дни рождения">
+          <button type="button" class="btn-submit" style="margin-top: 8px;" onclick="addCustomCategory()">Добавить</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Дата</label>
+        <input type="date" class="form-input" id="inputDate">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Время начала</label>
+        <input type="time" class="form-input" id="inputTime">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Время окончания</label>
+        <input type="time" class="form-input" id="inputTimeEnd">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Место</label>
+        <input type="text" class="form-input" id="inputPlace" placeholder="Например: Музей современного искусства">
+      </div>
+
+      <!-- === ВЫБОР АВТОРА === -->
+      <div class="form-group">
+        <label class="form-label">Кто добавляет</label>
+        <div class="author-options">
+          <div class="author-option selected" data-author="Я" onclick="selectAuthor(this)">👤 Я</div>
+          <div class="author-option" data-author="Hamster" onclick="selectAuthor(this)">🐹 Hamster</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Описание / Заметки</label>
+        <textarea class="form-textarea" id="inputDesc" placeholder="Дополнительные детали..."></textarea>
+      </div>
+      <button class="btn-submit" onclick="saveEvent()" id="btnSave">Сохранить</button>
+      <div class="btn-row" id="shareAction" style="display:none;">
+        <button class="btn-submit" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;" onclick="shareCurrentEvent()">🔗 Поделиться</button>
+      </div>
+      <div class="btn-row" id="editActions" style="display:none;">
+        <button class="btn-submit btn-secondary" onclick="cancelEdit()" id="btnCancelOrRemove">Отмена</button>
+        <button class="btn-submit btn-danger" onclick="deleteEvent()">Удалить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-popup" id="dayPopup">
+    <div class="day-popup-content">
+      <div class="day-popup-header">
+        <div class="day-popup-title" id="dayPopupTitle">27 июня</div>
+        <button class="day-popup-close" onclick="closeDayPopup()">✕</button>
+      </div>
+      <div class="day-popup-events" id="dayPopupEvents"></div>
+      <div class="day-popup-add">
+        <button class="day-popup-add-btn" onclick="addEventForDay()">+ Добавить событие</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- === JS === -->
+  <!-- ============================================ -->
+  <script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwJmh7pS1As7WqGtj0nNxj1TDIh_6uWbsCFjCpph67FtF_di28htOKa4xdsq3EyZ5mHSw/exec';
+
+    // Базовые категории
+    const baseCategories = {
+      excursions: { name: 'Экскурсии', class: 'cat-excursions', color: '#4caf50', bg: '#e8f5e9' },
+      food: { name: 'Покушоц!', class: 'cat-food', color: '#ffc107', bg: '#fff8e1' },
+      exhibitions: { name: 'Выставки', class: 'cat-exhibitions', color: '#2196f3', bg: '#e3f2fd' },
+      concerts: { name: 'Концерты', class: 'cat-concerts', color: '#e91e63', bg: '#fce4ec' },
+      movies: { name: 'Кино', class: 'cat-movies', color: '#9c27b0', bg: '#f3e5f5' },
+      other: { name: 'Другое', class: 'cat-other', color: '#607d8b', bg: '#eceff1' }
+    };
+
+    // Все категории (базовые + кастомные)
+    let categories = { ...baseCategories };
+
+    function saveCategoriesToStorage() {
+      var customCats = {};
+      Object.keys(categories).forEach(function(key) {
+        if (!baseCategories[key]) {
+          customCats[key] = categories[key];
+        }
+      });
+      localStorage.setItem('customCategories', JSON.stringify(customCats));
+    }
+
+    function loadCategoriesFromStorage() {
+      var stored = localStorage.getItem('customCategories');
+      if (!stored) return;
+      try {
+        var customCats = JSON.parse(stored);
+        Object.keys(customCats).forEach(function(key) {
+          if (!categories[key]) {
+            categories[key] = customCats[key];
+            addCategoryToUIFromStorage(key, customCats[key]);
+          }
+        });
+      } catch(e) {}
+    }
+
+    function addCategoryToUIFromStorage(key, cat) {
+      // Add to modal
+      var div = document.createElement('div');
+      div.className = 'cat-option cat-custom';
+      div.dataset.cat = key;
+      div.style.background = (cat.bg || (cat.color ? cat.color + '22' : '#f5f5f5'));
+      div.style.color = cat.color || '#666';
+      div.onclick = function() { selectCategory(this); };
+      div.textContent = '✨ ' + cat.name;
+      var container = document.getElementById('categoryOptions');
+      if (container) container.appendChild(div);
+      // Add to filters
+      var filterDiv = document.createElement('div');
+      filterDiv.className = 'filter-chip';
+      filterDiv.onclick = function() { filterIdeas(key); };
+      filterDiv.dataset.filter = key;
+      filterDiv.textContent = cat.name;
+      if (cat.color) {
+        filterDiv.style.background = (cat.bg || cat.color + '22');
+        filterDiv.style.color = cat.color;
+        filterDiv.style.borderColor = cat.color + '44';
+      }
+      var filterContainer = document.getElementById('ideasFilter');
+      if (filterContainer) filterContainer.appendChild(filterDiv);
+    }
+
+    let currentDate = new Date();
+    let selectedCategory = 'excursions';
+    let selectedAuthor = 'Я';
+    let selectedDate = null;
+    let currentFilter = 'all';
+    let editingId = null;
+    let events = [];
+
+    function isGasReady() {
+      return GAS_URL && !GAS_URL.includes('ВСТАВЬТЕ');
+    }
+
+    // === ВЫБОР АВТОРА ===
+    function selectAuthor(el) {
+      document.querySelectorAll('.author-option').forEach(a => a.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedAuthor = el.dataset.author;
+    }
+
+    // === КАСТОМНЫЕ КАТЕГОРИИ ===
+    function showCustomCategory() {
+      document.getElementById('customCategoryInput').style.display = 'block';
+    }
+
+    function addCustomCategory() {
+      const name = document.getElementById('inputCustomCategory').value.trim();
+      if (!name) return;
+
+      const key = 'custom_' + Date.now();
+
+      // Сохранить в Google Sheets
+      saveCategoryToServer(key, name);
+
+      // Добавить локально
+      addCategoryToUI(key, name);
+      selectCategory(document.querySelector(`[data-cat="${key}"]`));
+
+      document.getElementById('customCategoryInput').style.display = 'none';
+      document.getElementById('inputCustomCategory').value = '';
+    }
+
+    function addCategoryToUI(key, name, color) {
+      categories[key] = { 
+        name: name, 
+        class: 'cat-custom', 
+        color: color || '#999', 
+        bg: color || '#f5f5f5' 
+      };
+
+      // Добавить в форму
+      const div = document.createElement('div');
+      div.className = 'cat-option cat-custom';
+      div.dataset.cat = key;
+      div.onclick = function() { selectCategory(this); };
+      div.textContent = '✨ ' + name;
+      document.getElementById('categoryOptions').appendChild(div);
+
+      // Добавить в фильтры
+      const filterDiv = document.createElement('div');
+      filterDiv.className = 'filter-chip';
+      filterDiv.onclick = function() { filterIdeas(key); };
+      filterDiv.dataset.filter = key;
+      filterDiv.textContent = name;
+      document.getElementById('ideasFilter').appendChild(filterDiv);
+    }
+
+    function saveCategoryToServer(key, name) {
+      if (!isGasReady()) return;
+
+      const callbackName = 'cat_cb_' + Date.now();
+      window[callbackName] = function(data) {
+        delete window[callbackName];
+        if (script && script.parentNode) document.head.removeChild(script);
+      };
+
+      const script = document.createElement('script');
+      var params = [];
+      params.push('action=addCategory');
+      params.push('callback=' + encodeURIComponent(callbackName));
+      params.push('key=' + encodeURIComponent(key));
+      params.push('name=' + encodeURIComponent(name));
+
+      script.src = GAS_URL + '?' + params.join('&');
+      document.head.appendChild(script);
+    }
+
+    function loadCategoriesFromSheet(cats) {
+      if (!cats) return;
+      cats.forEach(function(c) {
+        var key = c['Ключ'] || c['key'];
+        var name = c['Название'] || c['name'];
+        if (key && name) {
+          // Skip base categories (they already exist)
+          var baseNames = Object.values(baseCategories).map(b => b.name);
+          if (baseNames.includes(name)) return;
+          // Skip if category with this name already exists
+          var existingKey = Object.keys(categories).find(k => categories[k].name === name);
+          if (!existingKey) {
+            addCategoryToUI(key, name);
+          }
+        }
+      });
+    }
+
+    function processSheetData(sheetEvents) {
+      console.log('Processing', sheetEvents.length, 'events from sheet');
+      if (!sheetEvents || sheetEvents.length === 0) {
+        console.log('No events in sheet, keeping local events');
+        return;
+      }
+
+      sheetEvents.forEach(function(e) {
+        var id = String(e['ID'] || '');
+        var title = e['Название'] || '';
+        var dateStr = '';
+        if (e['Дата']) {
+          var d = new Date(e['Дата']);
+          var offset = d.getTimezoneOffset() * 60000;
+          var localDate = new Date(d.getTime() + offset);
+          dateStr = localDate.getFullYear() + '-' +
+                    String(localDate.getMonth()+1).padStart(2,'0') + '-' +
+                    String(localDate.getDate()).padStart(2,'0');
+        }
+
+        var timeStr = '';
+        if (e['Время начала']) {
+          var timeStrRaw = String(e['Время начала']);
+          var timeMatch = timeStrRaw.match(/T(\d{2}):(\d{2}):/);
+          if (timeMatch) {
+            timeStr = timeMatch[1] + ':' + timeMatch[2];
+          } else {
+            var simpleMatch = timeStrRaw.match(/(\d{2}):(\d{2})/);
+            if (simpleMatch) timeStr = simpleMatch[1] + ':' + simpleMatch[2];
+          }
+        }
+
+        var timeEndStr = '';
+        if (e['Время окончания']) {
+          var teRaw = String(e['Время окончания']);
+          var teMatch = teRaw.match(/T(\d{2}):(\d{2}):/);
+          if (teMatch) {
+            timeEndStr = teMatch[1] + ':' + teMatch[2];
+          } else {
+            var teSimple = teRaw.match(/(\d{2}):(\d{2})/);
+            if (teSimple) timeEndStr = teSimple[1] + ':' + teSimple[2];
+          }
+        }
+
+        var cat = 'other';
+        var catMap = {
+          'Экскурсии': 'excursions', 'excursions': 'excursions',
+          'Покушоц!': 'food', 'Покушать': 'food', 'food': 'food',
+          'Выставки': 'exhibitions', 'exhibitions': 'exhibitions',
+          'Концерты': 'concerts', 'concerts': 'concerts',
+          'Кино': 'movies', 'movies': 'movies',
+          'Другое': 'other', 'other': 'other'
+        };
+        if (e['Категория'] && catMap[e['Категория']]) {
+          cat = catMap[e['Категория']];
+        } else if (e['Категория']) {
+          // Кастомная категория
+          cat = e['Категория'];
+        }
+
+        var newEvent = {
+          id: id || Date.now() + Math.random(),
+          title: e['Название'] || '',
+          date: dateStr,
+          time: timeStr,
+          timeEnd: timeEndStr,
+          category: cat,
+          place: e['Место'] || '',
+          author: e['Автор'] || 'Я',
+          desc: e['Описание'] || e['Заметки'] || ''
+        };
+
+        var existingIndex = events.findIndex(function(ev) {
+          return String(ev.id) === id || (ev.title === title && ev.date === dateStr);
+        });
+
+        if (existingIndex >= 0) {
+          events[existingIndex] = newEvent;
+        } else {
+          events.push(newEvent);
+        }
+      });
+
+      renderCalendar();
+      if (document.getElementById('view-ideas').classList.contains('active')) {
+        renderIdeas();
+      }
+      console.log('Total events after merge:', events.length);
+    }
+
+    function loadFromSheet() {
+      if (!isGasReady()) {
+        console.log('Google Sheets не настроен'); return;
+      }
+      const btn = document.getElementById('syncBtn');
+      if (btn) btn.classList.add('spin');
+
+      const callbackName = 'cb_' + Date.now();
+
+      window[callbackName] = function(data) {
+        delete window[callbackName];
+        if (script && script.parentNode) document.head.removeChild(script);
+        if (btn) btn.classList.remove('spin');
+
+        if (data.error) {
+          console.error('Server error:', data.error);
+          return;
+        }
+        if (data.events) {
+          processSheetData(data.events);
+        }
+        if (data.categories) {
+          loadCategoriesFromSheet(data.categories);
+        }
+      };
+
+      const script = document.createElement('script');
+      script.src = GAS_URL + '?action=get&callback=' + callbackName;
+
+      script.onerror = function() {
+        delete window[callbackName];
+        if (script && script.parentNode) document.head.removeChild(script);
+        if (btn) btn.classList.remove('spin');
+        console.error('Failed to load data');
+      };
+
+      setTimeout(function() {
+        if (window[callbackName]) {
+          delete window[callbackName];
+          if (script && script.parentNode) document.head.removeChild(script);
+          if (btn) btn.classList.remove('spin');
+          console.error('Load timeout');
+        }
+      }, 10000);
+
+      document.head.appendChild(script);
+    }
+
+    function saveToServer(ev) {
+      if (!isGasReady()) return;
+
+      const catNameMap = {
+        excursions: 'Экскурсии',
+        food: 'Покушоц!',
+        exhibitions: 'Выставки',
+        concerts: 'Концерты',
+        movies: 'Кино',
+        other: 'Другое'
+      };
+
+      var categoryName = catNameMap[ev.category] || categories[ev.category]?.name || ev.category;
+
+      const callbackName = 'save_cb_' + Date.now();
+      window[callbackName] = function(data) {
+        delete window[callbackName];
+        if (script && script.parentNode) document.head.removeChild(script);
+        console.log('Saved:', data);
+      };
+
+      const script = document.createElement('script');
+
+      var params = [];
+      params.push('action=update');
+      params.push('callback=' + encodeURIComponent(callbackName));
+      params.push('id=' + encodeURIComponent(String(ev.id)));
+      params.push('title=' + encodeURIComponent(ev.title));
+      params.push('date=' + encodeURIComponent(ev.date || ''));
+      params.push('time=' + encodeURIComponent(ev.time || ''));
+      params.push('timeEnd=' + encodeURIComponent(ev.timeEnd || ''));
+      params.push('category=' + encodeURIComponent(categoryName));
+      params.push('place=' + encodeURIComponent(ev.place || ''));
+      params.push('author=' + encodeURIComponent(ev.author || 'Я'));
+      params.push('desc=' + encodeURIComponent(ev.desc || ''));
+
+      script.src = GAS_URL + '?' + params.join('&');
+      script.onerror = function() {
+        delete window[callbackName];
+        if (script.parentNode) document.head.removeChild(script);
+        console.error('Save failed');
+      };
+
+      document.head.appendChild(script);
+    }
+
+    function deleteFromServer(id) {
+      if (!isGasReady()) return;
+
+      const callbackName = 'del_cb_' + Date.now();
+      window[callbackName] = function(data) {
+        delete window[callbackName];
+        if (script && script.parentNode) document.head.removeChild(script);
+      };
+
+      const script = document.createElement('script');
+      script.src = GAS_URL + '?action=delete&callback=' + callbackName + '&id=' + encodeURIComponent(id);
+      script.onerror = function() {
+        delete window[callbackName];
+        if (script.parentNode) document.head.removeChild(script);
+      };
+
+      document.head.appendChild(script);
+    }
+
+    function renderCalendar() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                          'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+      document.getElementById('monthTitle').textContent = `${monthNames[month]} ${year}`;
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+      const startDayOfWeek = (firstDay.getDay() + 6) % 7;
+
+      const calendarBody = document.getElementById('calendarBody');
+      calendarBody.innerHTML = '';
+
+      let currentDay = 1 - startDayOfWeek;
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+      const totalCells = startDayOfWeek + daysInMonth;
+      const numWeeks = Math.ceil(totalCells / 7);
+
+      for (let week = 0; week < numWeeks; week++) {
+        const weekRow = document.createElement('div');
+        weekRow.className = 'week-row';
+
+        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+          const cell = document.createElement('div');
+          cell.className = 'day-cell';
+          if (dayOfWeek >= 5) cell.classList.add('weekend');
+
+          if (currentDay < 1 || currentDay > daysInMonth) {
+            cell.classList.add('other-month');
+            let displayDay;
+            if (currentDay < 1) {
+              const prevMonth = new Date(year, month, 0);
+              displayDay = prevMonth.getDate() + currentDay;
+            } else {
+              displayDay = currentDay - daysInMonth;
+            }
+            cell.innerHTML = `<div class="day-number">${displayDay}</div><div class="add-hover">+</div>`;
+          } else {
+            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(currentDay).padStart(2,'0')}`;
+            if (dateStr === todayStr) cell.classList.add('today');
+
+            const dayEvents = events.filter(e => e.date === dateStr).sort((a,b) => (a.time||'').localeCompare(b.time||''));
+
+            let eventsHtml = '';
+            const maxEvents = 3;
+            dayEvents.slice(0, maxEvents).forEach(ev => {
+              const cat = categories[ev.category] || categories.other;
+              const timeRange = ev.time ? (ev.timeEnd ? `${ev.time}–${ev.timeEnd}` : ev.time) : '';
+              var pastClass = isEventPast(ev) ? ' past' : '';
+              const catStyle = getCatStyle(cat);
+            eventsHtml += `<div class="event-chip ${cat.class}${pastClass}" ${catStyle} title="${ev.title}${ev.place ? ' — ' + ev.place : ''}${ev.time ? ' (' + ev.time + (ev.timeEnd ? '–' + ev.timeEnd : '') + ')' : ''}" onclick="event.stopPropagation(); openEditModalById('${ev.id}')">${ev.time ? `<b>${ev.time}${ev.timeEnd ? '–'+ev.timeEnd : ''}</b><br>` : ''}${ev.title}</div>`;
+            });
+            if (dayEvents.length > maxEvents) {
+              eventsHtml += `<div class="event-chip more">+${dayEvents.length - maxEvents} ещё</div>`;
+            }
+
+            const dayNum = currentDay;
+            const monthNameCap = monthNames[month];
+            cell.innerHTML = `
+              <div class="day-number">${currentDay}</div>
+              <div class="day-events">${eventsHtml}</div>
+              <div class="add-hover">+</div>
+            `;
+            cell.onclick = () => openDayPopup(dateStr, dayNum, monthNameCap);
+          }
+
+          weekRow.appendChild(cell);
+          currentDay++;
+        }
+
+        calendarBody.appendChild(weekRow);
+      }
+    }
+
+    function prevMonth() {
+      if (calendarView === 'week') {
+        currentDate.setDate(currentDate.getDate() - 7);
+        renderWeekView();
+      } else if (calendarView === 'year') {
+        currentDate.setFullYear(currentDate.getFullYear() - 1);
+        renderYearView();
+      } else {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
+      }
+    }
+
+    function nextMonth() {
+      if (calendarView === 'week') {
+        currentDate.setDate(currentDate.getDate() + 7);
+        renderWeekView();
+      } else if (calendarView === 'year') {
+        currentDate.setFullYear(currentDate.getFullYear() + 1);
+        renderYearView();
+      } else {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+      }
+    }
+
+    function switchView(view) {
+      const calendarView = document.getElementById('view-calendar');
+      const ideasView = document.getElementById('view-ideas');
+      const tabCalendar = document.getElementById('tab-calendar');
+      const tabIdeas = document.getElementById('tab-ideas');
+      const monthNav = document.getElementById('monthNav');
+      const app = document.getElementById('app');
+      const viewSwitcher = document.getElementById('viewSwitcher');
+
+      localStorage.setItem('lastView', view);
+
+      if (view === 'calendar') {
+        calendarView.style.display = 'flex';
+        ideasView.classList.remove('active');
+        tabCalendar.classList.add('active');
+        tabIdeas.classList.remove('active');
+        monthNav.classList.remove('hidden');
+        app.classList.remove('view-ideas-active');
+        viewSwitcher.classList.remove('hidden');
+      } else {
+        calendarView.style.display = 'none';
+        ideasView.classList.add('active');
+        tabCalendar.classList.remove('active');
+        tabIdeas.classList.add('active');
+        monthNav.classList.add('hidden');
+        app.classList.add('view-ideas-active');
+        viewSwitcher.classList.add('hidden');
+        renderIdeas();
+      }
+    }
+
+    let calendarView = 'month';
+
+    function switchCalendarView(view) {
+      calendarView = view;
+      var buttons = document.querySelectorAll('.view-btn');
+      for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].dataset.view === view) {
+          buttons[i].classList.add('active');
+        } else {
+          buttons[i].classList.remove('active');
+        }
+      }
+      var calendarViewEl = document.getElementById('view-calendar');
+      var weekdaysHeader = document.getElementById('weekdaysHeader');
+      if (view === 'year') {
+        calendarViewEl.classList.add('year-view');
+        if (weekdaysHeader) weekdaysHeader.style.display = 'none';
+      } else {
+        calendarViewEl.classList.remove('year-view');
+        if (weekdaysHeader) weekdaysHeader.style.display = 'grid';
+      }
+      if (view === 'month') {
+        renderCalendar();
+      } else if (view === 'week') {
+        renderWeekView();
+      } else if (view === 'year') {
+        renderYearView();
+      }
+    }
+
+    function renderWeekView() {
+      var calendarBody = document.getElementById('calendarBody');
+      calendarBody.innerHTML = '';
+      var year = currentDate.getFullYear();
+      var month = currentDate.getMonth();
+      var day = currentDate.getDate();
+      var startOfWeek = new Date(year, month, day - ((new Date(year, month, day).getDay() + 6) % 7));
+      var endOfWeek = new Date(startOfWeek.getTime() + 6 * 86400000);
+      var monthNames = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+      var startMonth = monthNames[startOfWeek.getMonth()];
+      var endMonth = monthNames[endOfWeek.getMonth()];
+      var startDay = startOfWeek.getDate();
+      var endDay = endOfWeek.getDate();
+      var weekRange;
+      if (startOfWeek.getMonth() === endOfWeek.getMonth()) {
+        weekRange = startDay + ' – ' + endDay + ' ' + endMonth + ' ' + endOfWeek.getFullYear();
+      } else {
+        weekRange = startDay + ' ' + startMonth + ' – ' + endDay + ' ' + endMonth + ' ' + endOfWeek.getFullYear();
+      }
+      document.getElementById('monthTitle').textContent = weekRange;
+      var weekRow = document.createElement('div');
+      weekRow.className = 'week-row';
+      weekRow.style.flex = '1';
+      for (var i = 0; i < 7; i++) {
+        var cellDate = new Date(startOfWeek.getTime() + i * 86400000);
+        var dateStr = cellDate.getFullYear() + '-' + String(cellDate.getMonth()+1).padStart(2,'0') + '-' + String(cellDate.getDate()).padStart(2,'0');
+        var cell = document.createElement('div');
+        cell.className = 'day-cell';
+        if (i >= 5) cell.classList.add('weekend');
+        var dayEvents = events.filter(function(e) { return e.date === dateStr; }).sort(function(a,b) { return (a.time||'').localeCompare(b.time||''); });
+        var eventsHtml = '';
+        for (var j = 0; j < dayEvents.length; j++) {
+          var ev = dayEvents[j];
+          var cat = categories[ev.category] || categories.other;
+          var timeRange = ev.time ? (ev.timeEnd ? ev.time + '-' + ev.timeEnd : ev.time) : '';
+          var timePrefix = timeRange ? timeRange + ' ' : '';
+          var pastClass2 = isEventPast(ev) ? " past" : "";
+          var catStyle2 = getCatStyle(cat); eventsHtml += "<div class=\"event-chip " + cat.class + pastClass2 + "\" " + catStyle2 + " title=\"" + ev.title + (ev.place ? " - " + ev.place : "") + (ev.time ? " (" + ev.time + (ev.timeEnd ? "-" + ev.timeEnd : "") + ")" : "") + "\" onclick=\"event.stopPropagation(); openEditModalById('" + ev.id + "')\">" + (ev.time ? "<b>" + ev.time + (ev.timeEnd ? "-" + ev.timeEnd : "") + "</b><br>" : "") + ev.title + "</div>";
+        }
+        cell.innerHTML = "<div class=\"day-number\">" + cellDate.getDate() + "</div><div class=\"day-events\">" + eventsHtml + "</div><div class=\"add-hover\">+</div>";
+        var dayNum = cellDate.getDate();
+        var monthNameCap = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'][cellDate.getMonth()];
+        cell.onclick = (function(ds, dn, mn) { return function() { openDayPopup(ds, dn, mn); }; })(dateStr, dayNum, monthNameCap);
+        weekRow.appendChild(cell);
+      }
+      calendarBody.appendChild(weekRow);
+    }
+
+    function renderYearView() {
+      var calendarBody = document.getElementById('calendarBody');
+      calendarBody.innerHTML = '';
+      var year = currentDate.getFullYear();
+      document.getElementById('monthTitle').textContent = year;
+      var monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+      var grid = document.createElement('div');
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+      grid.style.gap = '12px';
+      grid.style.padding = '12px';
+      grid.style.flex = '1';
+      grid.style.overflow = 'auto';
+      for (var m = 0; m < 12; m++) {
+        var monthCard = document.createElement('div');
+        monthCard.style.border = '1px solid #e8e8e8';
+        monthCard.style.borderRadius = '10px';
+        monthCard.style.padding = '10px';
+        monthCard.style.background = '#fff';
+        monthCard.style.cursor = 'pointer';
+        monthCard.style.transition = 'all 0.2s';
+        monthCard.onmouseenter = function() { this.style.background = '#f8f8ff'; this.style.borderColor = '#667eea'; };
+        monthCard.onmouseleave = function() { this.style.background = '#fff'; this.style.borderColor = '#e8e8e8'; };
+        var firstDay = new Date(year, m, 1);
+        var lastDay = new Date(year, m + 1, 0);
+        var daysInMonth = lastDay.getDate();
+        var startDayOfWeek = (firstDay.getDay() + 6) % 7;
+        var today = new Date();
+        var todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+        var miniCalendar = '<div style="font-weight:700;font-size:12px;color:#333;margin-bottom:8px;text-align:center;">' + monthNames[m] + '</div>';
+        miniCalendar += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;font-size:7px;color:#bbb;margin-bottom:2px;">';
+        var wdShort = ['П','В','С','Ч','П','С','В'];
+        for (var w = 0; w < 7; w++) {
+          miniCalendar += '<div>' + wdShort[w] + '</div>';
+        }
+        miniCalendar += '</div>';
+        miniCalendar += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">';
+        for (var empty = 0; empty < startDayOfWeek; empty++) {
+          miniCalendar += '<div style="height:18px;"></div>';
+        }
+        for (var d = 1; d <= daysInMonth; d++) {
+          var dateStr = year + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+          var hasEvents = false;
+          for (var e = 0; e < events.length; e++) {
+            if (events[e].date === dateStr) { hasEvents = true; break; }
+          }
+          var isToday = dateStr === todayStr;
+          var isPast = new Date(dateStr + 'T00:00:00') < new Date().setHours(0,0,0,0);
+          var style = 'height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;';
+          if (isToday) {
+            style += 'background:#667eea;color:white;font-weight:700;border-radius:4px;';
+          } else if (hasEvents && isPast) {
+            style += 'background:rgba(200,200,200,0.5);color:#999;font-weight:700;border-radius:50%;text-decoration:line-through;';
+          } else if (hasEvents) {
+            style += 'background:rgba(102,126,234,0.25);color:#667eea;font-weight:700;border-radius:50%;';
+          } else if (isPast) {
+            style += 'color:#ccc;border-radius:50%;text-decoration:line-through;';
+          } else {
+            style += 'color:#333;border-radius:50%;';
+          }
+          miniCalendar += '<div style="' + style + '">' + d + '</div>';
+        }
+        miniCalendar += '</div>';
+        monthCard.innerHTML = miniCalendar;
+        monthCard.onclick = (function(monthIdx) { return function() { currentDate = new Date(year, monthIdx, 1); switchCalendarView('month'); }; })(m);
+        grid.appendChild(monthCard);
+      }
+      calendarBody.appendChild(grid);
+    }
+
+    function renderIdeas() {
+      const list = document.getElementById('ideasList');
+      // Show ALL events, but sort: future first, then past (archived)
+      const sortedEvents = sortEventsByDate(events);
+
+      if (currentFilter !== 'all') {
+        const filtered = sortedEvents.filter(e => e.category === currentFilter);
+        if (filtered.length === 0) {
+          list.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">📝</div>
+              <div class="empty-state-text">Нет идей в категории «${getCategoryName(currentFilter)}»</div>
+            </div>
+          `;
+          return;
+        }
+        renderIdeasList(filtered, list);
+        return;
+      }
+
+      if (sortedEvents.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">💡</div>
+            <div class="empty-state-text">Пока нет идей. Добавьте первую!</div>
+          </div>
+        `;
+        return;
+      }
+
+      renderIdeasList(sortedEvents, list);
+    }
+
+    function getCategoryName(key) {
+      return categories[key]?.name || key;
+    }
+
+    function renderIdeasList(ideas, container) {
+      container.innerHTML = ideas.map(idea => {
+        const cat = categories[idea.category] || categories.other;
+        const timeRange = idea.time ? (idea.timeEnd ? `${idea.time}–${idea.timeEnd}` : idea.time) : '';
+        const isPast = idea.date && isEventPast(idea);
+        const pastClass = isPast ? 'past' : '';
+        const deleteBtn = !isPast ? `<button class="delete-btn" onclick="event.stopPropagation(); deleteEventById('${idea.id}')" title="Удалить">🗑️</button>` : '';
+        const catStyle = getCatStyle(cat);
+        return `
+          <div class="idea-card ${cat.class} ${pastClass}" onclick="openEditModalById('${idea.id}')" data-id="${idea.id}" ${catStyle}>
+            <div class="idea-title">${escapeHtml(idea.title)}</div>
+            <div class="idea-meta">
+              <span class="idea-category ${cat.class}" ${catStyle}>${getCategoryName(idea.category)}</span>
+              ${idea.date ? `<span class="idea-date">📅 ${formatDate(idea.date)}</span>` : '<span class="idea-date">📌 Без даты</span>'}
+            </div>
+            ${idea.place ? `<div class="idea-place"><a href="https://yandex.ru/maps/?text=${encodeURIComponent(idea.place)}" target="_blank">📍 ${escapeHtml(idea.place)}</a></div>` : ''}
+            ${timeRange ? `<div class="idea-time">🕐 ${timeRange}</div>` : ''}
+            ${idea.author ? `<div class="idea-author">👤 ${escapeHtml(idea.author)}</div>` : ''}
+            ${deleteBtn}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterIdeas(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.filter === filter);
+      });
+      renderIdeas();
+    }
+
+    function formatDate(dateStr) {
+      const [y, m, d] = dateStr.split('-');
+      const monthNames = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+      return d + ' ' + monthNames[parseInt(m)-1] + ' ' + y;
+    }
+
+    function openModal() {
+      editingId = null;
+      document.getElementById('modalTitle').textContent = 'Новая запись';
+      document.getElementById('inputTitle').value = '';
+      document.getElementById('inputDate').value = selectedDate || '';
+      document.getElementById('inputTime').value = '';
+      document.getElementById('inputTimeEnd').value = '';
+      document.getElementById('inputPlace').value = '';
+      document.getElementById('inputDesc').value = '';
+      selectCategory(document.querySelector('.cat-option[data-cat="excursions"]'));
+
+      const savedAuthor = localStorage.getItem('lastAuthor');
+      if (savedAuthor) {
+        const el = document.querySelector(`.author-option[data-author="${savedAuthor}"]`);
+        if (el) selectAuthor(el);
+      } else {
+        selectAuthor(document.querySelector('.author-option[data-author="Я"]'));
+      }
+
+      document.getElementById('customCategoryInput').style.display = 'none';
+      document.getElementById('inputCustomCategory').value = '';
+
+      document.getElementById('modal').classList.add('show');
+      document.getElementById('editActions').style.display = 'none';
+            document.getElementById('btnSave').textContent = 'Сохранить';
+    }
+
+    function openEditModal(ev) {
+      editingId = ev.id;
+      document.getElementById('modalTitle').textContent = 'Редактировать';
+      document.getElementById('inputTitle').value = ev.title;
+      document.getElementById('inputDate').value = ev.date || '';
+      document.getElementById('inputTime').value = ev.time || '';
+      document.getElementById('inputTimeEnd').value = ev.timeEnd || '';
+      document.getElementById('inputPlace').value = ev.place || '';
+      document.getElementById('inputDesc').value = ev.desc || '';
+
+      const catEl = document.querySelector(`.cat-option[data-cat="${ev.category}"]`) || document.querySelector('.cat-option[data-cat="other"]');
+      selectCategory(catEl);
+
+      const authorEl = document.querySelector(`.author-option[data-author="${ev.author || 'Я'}"]`) || document.querySelector('.author-option[data-author="Я"]');
+      selectAuthor(authorEl);
+
+      document.getElementById('modal').classList.add('show');
+      document.getElementById('editActions').style.display = 'flex';
+      document.getElementById('shareAction').style.display = 'flex';
+      document.getElementById('btnSave').textContent = 'Сохранить изменения';
+
+      const btnCancelOrRemove = document.getElementById('btnCancelOrRemove');
+      if (!ev.date || ev.date === '') {
+        btnCancelOrRemove.textContent = 'Отмена';
+        btnCancelOrRemove.onclick = cancelEdit;
+      } else {
+        btnCancelOrRemove.textContent = 'Убрать в идеи';
+        btnCancelOrRemove.onclick = removeToIdeas;
+      }
+    }
+
+    function openEditModalById(id) {
+      const ev = events.find(e => String(e.id) === String(id));
+      if (!ev) return;
+      openEditModal(ev);
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('show');
+            editingId = null;
+      selectedDate = null;
+    }
+
+    function selectCategory(el) {
+      document.querySelectorAll('.cat-option').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedCategory = el.dataset.cat;
+    }
+
+    function checkDuplicate(title, date, excludeId) {
+      const normalizedTitle = title.trim().toLowerCase();
+      return events.find(e => {
+        if (excludeId && String(e.id) === String(excludeId)) return false;
+        const sameTitle = e.title.trim().toLowerCase() === normalizedTitle;
+        if (!sameTitle) return false;
+        if (date) {
+          return e.date === date;
+        } else {
+          return !e.date || e.date === '';
+        }
+      });
+    }
+
+    function saveEvent() {
+      const title = document.getElementById('inputTitle').value.trim();
+      const date = document.getElementById('inputDate').value;
+      const time = document.getElementById('inputTime').value;
+      const timeEnd = document.getElementById('inputTimeEnd').value;
+      const place = document.getElementById('inputPlace').value.trim();
+      const desc = document.getElementById('inputDesc').value.trim();
+
+      if (!title) {
+        alert('Введите название');
+        return;
+      }
+
+      const duplicate = checkDuplicate(title, date, editingId);
+      if (duplicate) {
+        const location = duplicate.date ? `на ${formatDate(duplicate.date)}` : 'во вкладке «Идеи»';
+        const msg = `Событие «${title}» уже есть ${location}.\n\nСохранить всё равно?`;
+        if (!confirm(msg)) {
+          return;
+        }
+      }
+
+      if (editingId) {
+        const ev = events.find(e => String(e.id) === String(editingId));
+        if (ev) {
+          ev.title = title;
+          ev.date = date;
+          ev.time = time;
+          ev.timeEnd = timeEnd;
+          ev.place = place;
+          ev.author = selectedAuthor;
+          ev.category = selectedCategory;
+          ev.desc = desc;
+          saveToServer(ev);
+        }
+      } else {
+        const newEvent = {
+          id: Date.now(),
+          title, date, time, timeEnd, place,
+          author: selectedAuthor,
+          category: selectedCategory,
+          desc
+        };
+        events.push(newEvent);
+        saveToServer(newEvent);
+      }
+
+      localStorage.setItem('lastAuthor', selectedAuthor);
+
+      closeModal();
+      renderCalendar();
+      if (document.getElementById('view-ideas').classList.contains('active')) {
+        renderIdeas();
+      }
+    }
+
+    function removeToIdeas() {
+      if (!editingId) return;
+      const ev = events.find(e => String(e.id) === String(editingId));
+      if (ev) {
+        ev.date = '';
+        ev.time = '';
+        ev.timeEnd = '';
+        saveToServer(ev);
+      }
+      closeModal();
+      renderCalendar();
+      if (document.getElementById('view-ideas').classList.contains('active')) {
+        renderIdeas();
+      }
+    }
+
+    function cancelEdit() {
+      closeModal();
+    }
+
+    function deleteEvent() {
+      if (!editingId) return;
+      if (!confirm('Удалить событие полностью? Это действие нельзя отменить.')) return;
+      events = events.filter(e => String(e.id) !== String(editingId));
+      deleteFromServer(editingId);
+      closeModal();
+      renderCalendar();
+      renderIdeas();
+    }
+
+    function deleteEventById(id) {
+      if (!confirm('Удалить событие полностью? Это действие нельзя отменить.')) return;
+      events = events.filter(e => String(e.id) !== String(id));
+      deleteFromServer(id);
+      renderCalendar();
+      renderIdeas();
+    }
+
+    function openDayPopup(dateStr, day, monthName) {
+      selectedDate = dateStr;
+      const dayEvents = events.filter(e => e.date === dateStr).sort((a,b) => (a.time||'').localeCompare(b.time||''));
+
+      var monthNamesNom = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+      var monthNamesGen = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+      var monthIndex = monthNamesNom.indexOf(monthName);
+      var monthGen = monthIndex >= 0 ? monthNamesGen[monthIndex] : monthName.toLowerCase();
+
+      document.getElementById('dayPopupTitle').textContent = day + ' ' + monthGen;
+
+      const container = document.getElementById('dayPopupEvents');
+      if (dayEvents.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-text">Нет событий</div></div>';
+      } else {
+        container.innerHTML = dayEvents.map(ev => {
+          const cat = categories[ev.category] || categories.other;
+          const timeRange = ev.time ? (ev.timeEnd ? `${ev.time} – ${ev.timeEnd}` : ev.time) : '';
+          const popupStyle = cat.class === 'cat-custom' && cat.color ? `style="background:${cat.bg || cat.color + '22'};border-color:${cat.color}"` : `style="background: ${cat.bg}; border-color: ${cat.color}"`;
+          const titleStyle = cat.class === 'cat-custom' && cat.color ? `style="color:${cat.color}"` : `style="color: ${cat.color}"`;
+          return `
+            <div class="day-popup-event ${cat.class}" ${popupStyle} onclick="event.stopPropagation(); openEditModalById('${ev.id}')">
+              <div class="day-popup-event-title" ${titleStyle}>${ev.title}</div>
+              ${timeRange ? `<div class="day-popup-event-time">🕐 ${timeRange}</div>` : ''}
+              ${ev.place ? `<div class="day-popup-event-place"><a href="https://yandex.ru/maps/?text=${encodeURIComponent(ev.place)}" target="_blank">📍 ${escapeHtml(ev.place)}</a></div>` : ''}
+              ${ev.author ? `<div class="day-popup-event-author">👤 ${escapeHtml(ev.author)}</div>` : ''}
+              ${ev.desc ? `<div class="day-popup-event-place">📝 ${ev.desc}</div>` : ''}
+            </div>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('dayPopup').classList.add('show');
+    }
+
+    function closeDayPopup() {
+      document.getElementById('dayPopup').classList.remove('show');
+    }
+
+    function addEventForDay() {
+      closeDayPopup();
+      openModal();
+    }
+
+    function isEventPast(ev) {
+      if (!ev.date) return false;
+      var today = new Date();
+      today.setHours(0, 0, 0, 0);
+      var eventDate = new Date(ev.date + 'T00:00:00');
+      return eventDate < today;
+    }
+
+    function sortEventsByDate(eventsList) {
+      return eventsList.sort(function(a, b) {
+        var aPast = isEventPast(a);
+        var bPast = isEventPast(b);
+        if (aPast && !bPast) return 1;
+        if (!aPast && bPast) return -1;
+        return 0;
+      });
+    }
+
+    function getCatStyle(cat) {
+      if (!cat) return '';
+      if (cat.class === 'cat-custom' && cat.color) {
+        return `style="background:${cat.bg || cat.color + '22'};color:${cat.color};border-color:${cat.color}"`;
+      }
+      return '';
+    }
+
+    function shareCurrentEvent() {
+      if (!editingId) return;
+      shareEvent(editingId, { textContent: '🔗 Поделиться', classList: { add: function(){}, remove: function(){} } });
+    }
+
+    function shareEvent(id, btn) {
+      const ev = events.find(e => String(e.id) === String(id));
+      if (!ev) return;
+      const cat = categories[ev.category] || categories.other;
+      const timeRange = ev.time ? (ev.timeEnd ? ev.time + '–' + ev.timeEnd : ev.time) : '';
+      const dateText = ev.date ? formatDate(ev.date) : 'Без даты';
+      const shareText = '📅 Туда-сюда\n' +
+        (cat.name ? cat.name + '\n' : '') +
+        '✨ ' + ev.title + '\n' +
+        '📅 ' + dateText +
+        (timeRange ? '\n🕐 ' + timeRange : '') +
+        (ev.place ? '\n📍 ' + ev.place : '') +
+        (ev.author ? '\n👤 ' + ev.author : '') +
+        (ev.desc ? '\n📝 ' + ev.desc : '');
+
+      if (navigator.share) {
+        navigator.share({
+          title: ev.title,
+          text: shareText
+        }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(shareText).then(() => {
+          btn.textContent = '✅ Скопировано';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.textContent = '🔗 Поделиться';
+            btn.classList.remove('copied');
+          }, 2000);
+        }).catch(() => {
+          // Fallback for older browsers
+          const ta = document.createElement('textarea');
+          ta.value = shareText;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          btn.textContent = '✅ Скопировано';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.textContent = '🔗 Поделиться';
+            btn.classList.remove('copied');
+          }, 2000);
+        });
+      }
+    }
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Load custom categories from localStorage
+      loadCategoriesFromStorage();
+      // Long-press on filter chips in Ideas tab to open category editor
+      var ideasFilter = document.getElementById('ideasFilter');
+      if (ideasFilter) {
+        var pressTimer = null;
+        var pressTarget = null;
+        ideasFilter.addEventListener('touchstart', function(e) {
+          var target = e.target.closest('.filter-chip');
+          if (!target) return;
+          pressTarget = target;
+          target.style.transform = 'scale(0.95)';
+          pressTimer = setTimeout(function() {
+            if (pressTarget) {
+              pressTarget.style.transform = '';
+              var key = pressTarget.dataset.filter;
+              if (key && key !== 'all') openCategoryEditor(key);
+              pressTarget = null;
+            }
+          }, 600);
+        }, {passive: true});
+        ideasFilter.addEventListener('touchend', function(e) {
+          if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+          if (pressTarget) { pressTarget.style.transform = ''; pressTarget = null; }
+        }, {passive: true});
+        ideasFilter.addEventListener('touchmove', function(e) {
+          if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+          if (pressTarget) { pressTarget.style.transform = ''; pressTarget = null; }
+        }, {passive: true});
+        ideasFilter.addEventListener('mousedown', function(e) {
+          var target = e.target.closest('.filter-chip');
+          if (!target) return;
+          if (e.button === 2) {
+            e.preventDefault();
+            var key = target.dataset.filter;
+            if (key && key !== 'all') openCategoryEditor(key);
+            return;
+          }
+          pressTarget = target;
+          target.style.transform = 'scale(0.95)';
+          pressTimer = setTimeout(function() {
+            if (pressTarget) {
+              pressTarget.style.transform = '';
+              var key = pressTarget.dataset.filter;
+              if (key && key !== 'all') openCategoryEditor(key);
+              pressTarget = null;
+            }
+          }, 600);
+        });
+        ideasFilter.addEventListener('mouseup', function(e) {
+          if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+          if (pressTarget) { pressTarget.style.transform = ''; pressTarget = null; }
+        });
+        ideasFilter.addEventListener('mouseleave', function(e) {
+          if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+          if (pressTarget) { pressTarget.style.transform = ''; pressTarget = null; }
+        });
+        ideasFilter.addEventListener('contextmenu', function(e) {
+          var target = e.target.closest('.filter-chip');
+          if (target) { e.preventDefault(); }
+        });
+      }
+
+      calendarView = 'month';
+      var viewButtons = document.querySelectorAll('.view-btn');
+      for (var i = 0; i < viewButtons.length; i++) {
+        if (viewButtons[i].dataset.view === 'month') {
+          viewButtons[i].classList.add('active');
+        } else {
+          viewButtons[i].classList.remove('active');
+        }
+      }
+      renderCalendar();
+      if (isGasReady()) loadFromSheet();
+
+      const savedView = localStorage.getItem('lastView');
+      if (savedView === 'ideas') {
+        switchView('ideas');
+      }
+      // Check for shared event in URL hash or search
+      var sharedId = null;
+      var hash = location.hash;
+      var search = location.search;
+      if (hash && hash.startsWith('#event=')) {
+        sharedId = decodeURIComponent(hash.substring(7));
+      } else if (search && search.startsWith('?event=')) {
+        sharedId = decodeURIComponent(search.substring(7));
+      }
+      if (sharedId) {
+        setTimeout(function() {
+          var ev = events.find(e => String(e.id) === sharedId);
+          if (ev) {
+            if (ev.date) {
+              var parts = ev.date.split('-');
+              if (parts.length === 3) {
+                currentDate = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+                renderCalendar();
+              }
+            }
+            openEditModal(ev);
+          }
+        }, 500);
+      }
+    });
+
+    document.getElementById('modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+    document.getElementById('dayPopup').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeDayPopup();
+    });
+
+    // === РЕДАКТОР КАТЕГОРИЙ ===
+    let editingCategoryKey = null;
+    // Color picker uses native input type="color" for reliability on mobile
+
+    function openCategoryEditor(focusKey) {
+      renderCategoryEditor();
+      document.getElementById('catEditorModal').classList.add('show');
+      if (focusKey) {
+        setTimeout(function() {
+          var input = document.querySelector('.cat-editor-item[data-cat-key="' + focusKey + '"] .cat-editor-name');
+          if (input) { input.focus(); input.select(); }
+        }, 300);
+      }
+    }
+
+    function closeCategoryEditor() {
+      document.getElementById('catEditorModal').classList.remove('show');
+      editingCategoryKey = null;
+    }
+
+    function renderCategoryEditor() {
+      const list = document.getElementById('catEditorList');
+      list.innerHTML = Object.entries(categories).map(([key, cat]) => {
+        const isBase = !!baseCategories[key];
+        const color = cat.color || '#999';
+        return `
+          <div class="cat-editor-item" data-cat-key="${key}">
+            <div class="cat-editor-color" style="background:${color}" onclick="var inp=this.querySelector('input');if(inp)inp.click();">
+              <input type="color" class="cat-editor-color-input" value="${color}" 
+                onchange="updateCategoryColor('${key}', this.value)"
+                onclick="event.stopPropagation();">
+            </div>
+            <input type="text" class="cat-editor-name" value="${cat.name}" 
+              onchange="updateCategoryName('${key}', this.value)"
+              onkeydown="if(event.key==='Enter'){this.blur();updateCategoryName('${key}',this.value);}">
+            <div class="cat-editor-actions">
+              ${!isBase ? `<button class="cat-editor-action" onclick="deleteCategory('${key}')" title="Удалить">🗑️</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    
+
+    function updateCategoryName(key, newName) {
+      newName = newName.trim();
+      if (!newName) return;
+      if (categories[key]) {
+        categories[key].name = newName;
+        // Update filter chip text
+        const filterChip = document.querySelector(`.filter-chip[data-filter="${key}"]`);
+        if (filterChip) filterChip.textContent = newName;
+        // Update cat-option text
+        const catOption = document.querySelector(`.cat-option[data-cat="${key}"]`);
+        if (catOption) {
+          const emoji = baseCategories[key] ? catOption.textContent.match(/^[^\s]+/) : '✨';
+          catOption.textContent = emoji + ' ' + newName;
+        }
+        // Save to localStorage
+        saveCategoriesToStorage();
+        // Re-render ideas if visible
+        if (document.getElementById('view-ideas').classList.contains('active')) {
+          renderIdeas();
+        }
+        renderCalendar();
+      }
+    }
+
+    function updateCategoryColor(key, color) {
+      if (categories[key]) {
+        categories[key].color = color;
+        categories[key].bg = color + '22'; // 22 = ~13% opacity
+        // Update cat-option in modal
+        const catOption = document.querySelector(`.cat-option[data-cat="${key}"]`);
+        if (catOption) {
+          catOption.style.background = color + '22';
+          catOption.style.color = color;
+        }
+        // Update filter-chip in ideas tab
+        const filterChip = document.querySelector(`.filter-chip[data-filter="${key}"]`);
+        if (filterChip) {
+          filterChip.style.background = color + '22';
+          filterChip.style.color = color;
+          filterChip.style.borderColor = color + '44';
+        }
+        // Update color circle in editor
+        const circle = document.querySelector(`.cat-editor-item[data-cat-key="${key}"] .cat-editor-color`);
+        if (circle) circle.style.background = color;
+        // Update hidden color input in editor
+        const colorInput = document.querySelector(`.cat-editor-item[data-cat-key="${key}"] .cat-editor-color-input`);
+        if (colorInput) colorInput.value = color;
+        // Save to localStorage
+        saveCategoriesToStorage();
+        // Re-render ideas and calendar
+        if (document.getElementById('view-ideas').classList.contains('active')) {
+          renderIdeas();
+        }
+        renderCalendar();
+      }
+    }
+
+    function deleteCategory(key) {
+      if (baseCategories[key]) {
+        alert('Базовые категории нельзя удалить');
+        return;
+      }
+      if (!confirm('Удалить категорию "' + categories[key].name + '"? События этой категории станут "Другими". Это действие нельзя отменить.')) return;
+      // Reassign events to 'other'
+      events.forEach(function(ev) {
+        if (ev.category === key) ev.category = 'other';
+      });
+      delete categories[key];
+      // Remove from DOM
+      const catOption = document.querySelector(`.cat-option[data-cat="${key}"]`);
+      if (catOption) catOption.remove();
+      const filterChip = document.querySelector(`.filter-chip[data-filter="${key}"]`);
+      if (filterChip) filterChip.remove();
+      // Save to localStorage
+      saveCategoriesToStorage();
+      // Re-render
+      renderCategoryEditor();
+      if (document.getElementById('view-ideas').classList.contains('active')) {
+        renderIdeas();
+      }
+      renderCalendar();
+    }
+
+    function addNewCategoryFromEditor() {
+      const name = document.getElementById('newCatName').value.trim();
+      if (!name) return;
+      var existingKey = Object.keys(categories).find(k => categories[k].name === name);
+      if (existingKey) {
+        alert('Категория "' + name + '" уже существует');
+        return;
+      }
+      const key = 'custom_' + Date.now();
+      const color = paletteColors[Math.floor(Math.random() * paletteColors.length)];
+      categories[key] = { name: name, class: 'cat-custom', color: color, bg: color + '22' };
+      // Add to modal
+      const div = document.createElement('div');
+      div.className = 'cat-option cat-custom';
+      div.dataset.cat = key;
+      div.style.background = color + '22';
+      div.style.color = color;
+      div.onclick = function() { selectCategory(this); };
+      div.textContent = '✨ ' + name;
+      document.getElementById('categoryOptions').appendChild(div);
+      // Add to filters
+      const filterDiv = document.createElement('div');
+      filterDiv.className = 'filter-chip';
+      filterDiv.onclick = function() { filterIdeas(key); };
+      filterDiv.dataset.filter = key;
+      filterDiv.textContent = name;
+      document.getElementById('ideasFilter').appendChild(filterDiv);
+      // Save to localStorage
+      saveCategoriesToStorage();
+      // Save to server
+      saveCategoryToServer(key, name);
+      // Clear input and re-render editor
+      document.getElementById('newCatName').value = '';
+      renderCategoryEditor();
+    }
+
+    document.getElementById('catEditorModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeCategoryEditor();
+    });
+  </script>
+  <!-- === КОНЕЦ JS === -->
+
+  <div class="cat-editor-overlay" id="catEditorModal">
+    <div class="cat-editor-sheet">
+      <div class="modal-header">
+        <div class="modal-title">Категории</div>
+        <button class="modal-close" onclick="closeCategoryEditor()">✕</button>
+      </div>
+      <div class="cat-editor-list" id="catEditorList"></div>
+      <div class="cat-editor-new">
+        <input type="text" class="form-input" id="newCatName" placeholder="Новая категория" style="flex:1;font-size:14px;padding:8px 12px;">
+        <button class="btn-submit" style="width:auto;padding:8px 16px;margin-top:0;font-size:13px;" onclick="addNewCategoryFromEditor()">+ Добавить</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
