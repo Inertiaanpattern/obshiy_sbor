@@ -14,6 +14,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <title>Общий сбор</title>
   <meta name="description" content="Календарь планов и идей">
+  <meta name="app-version" content="obshiy-sbor-2026-09-28-v2">
   <meta property="og:title" content="Общий сбор">
   <meta property="og:description" content="Посмотри, что запланировано!">
   <meta property="og:type" content="website">
@@ -840,13 +841,16 @@
     }
 
     function processSheetData(sheetEvents) {
-      console.log('Processing', sheetEvents.length, 'events from sheet');
-      if (!sheetEvents || sheetEvents.length === 0) {
-        console.log('No events in sheet, keeping local events');
-        return;
-      }
+      // Google Sheets является единственным источником истины для событий.
+      // Если таблица пустая, календарь тоже должен стать пустым.
+      // Локальные события здесь не сохраняем и не подмешиваем.
+      var incomingEvents = Array.isArray(sheetEvents) ? sheetEvents : [];
+      console.log('Processing', incomingEvents.length, 'events from sheet');
 
-      sheetEvents.forEach(function(e) {
+      // Полностью заменяем текущий список данными из таблицы.
+      events = [];
+
+      incomingEvents.forEach(function(e) {
         var id = String(e['ID'] || '');
         var title = e['Название'] || '';
         var dateStr = '';
@@ -911,15 +915,7 @@
           desc: e['Описание'] || e['Заметки'] || ''
         };
 
-        var existingIndex = events.findIndex(function(ev) {
-          return String(ev.id) === id || (ev.title === title && ev.date === dateStr);
-        });
-
-        if (existingIndex >= 0) {
-          events[existingIndex] = newEvent;
-        } else {
-          events.push(newEvent);
-        }
+        events.push(newEvent);
       });
 
       renderCalendar();
