@@ -782,7 +782,7 @@
         name: name, 
         class: 'cat-custom', 
         color: color || '#999', 
-        bg: color || '#f5f5f5' 
+        bg: color ? color + '22' : '#f5f5f5' 
       };
 
       // Добавить в форму
@@ -866,9 +866,19 @@
 
         if (!key || !name) return;
 
-        // Базовые категории не заменяем данными из таблицы.
-        var baseNames = Object.values(baseCategories).map(function(b) { return b.name; });
-        if (baseNames.includes(name)) return;
+        // Данные из Google Таблицы являются источником истины и для базовых,
+        // и для пользовательских категорий. Если цвет базовой категории
+        // изменили в редакторе, он должен переживать обновление страницы.
+        var existingBaseKey = Object.keys(baseCategories).find(function(k) {
+          return k === key || baseCategories[k].name === name;
+        });
+
+        if (existingBaseKey) {
+          categories[existingBaseKey].name = name;
+          categories[existingBaseKey].color = color;
+          categories[existingBaseKey].bg = color + '22';
+          return;
+        }
 
         // Если категория уже есть локально, серверные данные являются источником истины
         // для имени и цвета. Это важно: иначе старый localStorage мог перезаписывать цвет.
@@ -956,8 +966,13 @@
         if (e['Категория'] && catMap[e['Категория']]) {
           cat = catMap[e['Категория']];
         } else if (e['Категория']) {
-          // Кастомная категория
-          cat = e['Категория'];
+          // В таблице кастомная категория хранится своим названием,
+          // а в объекте календаря нужен именно её ключ.
+          var rawCategory = String(e['Категория']);
+          var customKey = Object.keys(categories).find(function(k) {
+            return k === rawCategory || (categories[k] && categories[k].name === rawCategory);
+          });
+          cat = customKey || rawCategory;
         }
 
         var newEvent = {
@@ -1000,11 +1015,13 @@
           console.error('Server error:', data.error);
           return;
         }
-        if (data.events) {
-          processSheetData(data.events);
-        }
+        // Сначала загружаем категории, чтобы при разборе событий
+        // можно было правильно сопоставить название категории с её ключом.
         if (data.categories) {
           loadCategoriesFromSheet(data.categories);
+        }
+        if (data.events) {
+          processSheetData(data.events);
         }
       };
 
@@ -1699,11 +1716,11 @@
     }
 
     function getCatStyle(cat) {
-      if (!cat) return '';
-      if (cat.class === 'cat-custom' && cat.color) {
-        return `style="background:${cat.bg || cat.color + '22'};color:${cat.color};border-color:${cat.color}"`;
-      }
-      return '';
+      if (!cat || !cat.color) return '';
+      // Пользовательский цвет должен применяться ко всем категориям,
+      // включая базовые. Inline-style перекрывает стандартные CSS-классы.
+      const bg = cat.bg || (cat.color + '22');
+      return `style="background:${bg} !important;color:${cat.color} !important;border-color:${cat.color} !important"`;
     }
 
     function shareCurrentEvent() {
