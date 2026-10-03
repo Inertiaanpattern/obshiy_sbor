@@ -11,7 +11,7 @@
   <link rel="icon" type="image/png" href="/obshiy_sbor/IMG_5938.png">
   <title>Общий сбор</title>
   <meta name="description" content="Календарь планов и идей">
-  <meta name="app-version" content="obshiy-sbor-2026-10-03-syncfix-v1">
+  <meta name="app-version" content="obshiy-sbor-2026-09-28-v2">
   <meta property="og:title" content="Общий сбор">
   <meta property="og:description" content="Посмотри, что запланировано!">
   <meta property="og:type" content="website">
@@ -764,10 +764,13 @@
       const key = 'custom_' + Date.now();
 
       // Сохранить в Google Sheets
-      saveCategoryToServer(key, name);
+      const color = paletteColors[Math.floor(Math.random() * paletteColors.length)];
+
+      // Сохранить в Google Sheets вместе с цветом
+      saveCategoryToServer(key, name, color);
 
       // Добавить локально
-      addCategoryToUI(key, name);
+      addCategoryToUI(key, name, color);
       selectCategory(document.querySelector(`[data-cat="${key}"]`));
 
       document.getElementById('customCategoryInput').style.display = 'none';
@@ -799,21 +802,55 @@
       document.getElementById('ideasFilter').appendChild(filterDiv);
     }
 
-    function saveCategoryToServer(key, name) {
+    function saveCategoryToServer(key, name, color) {
       if (!isGasReady()) return;
 
       const callbackName = 'cat_cb_' + Date.now();
+      let script = null;
+
       window[callbackName] = function(data) {
         delete window[callbackName];
         if (script && script.parentNode) document.head.removeChild(script);
+        if (!data || data.success === false) {
+          console.error('Category save error:', data);
+        }
       };
 
-      const script = document.createElement('script');
+      script = document.createElement('script');
       var params = [];
       params.push('action=addCategory');
       params.push('callback=' + encodeURIComponent(callbackName));
       params.push('key=' + encodeURIComponent(key));
       params.push('name=' + encodeURIComponent(name));
+      params.push('color=' + encodeURIComponent(color || '#999999'));
+
+      script.src = GAS_URL + '?' + params.join('&');
+      document.head.appendChild(script);
+    }
+
+    function saveCategoryChangesToServer(key) {
+      if (!isGasReady() || !categories[key]) return;
+
+      const callbackName = 'cat_update_cb_' + Date.now();
+      let script = null;
+      const name = categories[key].name || '';
+      const color = categories[key].color || '#999999';
+
+      window[callbackName] = function(data) {
+        delete window[callbackName];
+        if (script && script.parentNode) document.head.removeChild(script);
+        if (!data || data.success === false) {
+          console.error('Category update error:', data);
+        }
+      };
+
+      script = document.createElement('script');
+      var params = [];
+      params.push('action=updateCategory');
+      params.push('callback=' + encodeURIComponent(callbackName));
+      params.push('key=' + encodeURIComponent(key));
+      params.push('name=' + encodeURIComponent(name));
+      params.push('color=' + encodeURIComponent(color));
 
       script.src = GAS_URL + '?' + params.join('&');
       document.head.appendChild(script);
@@ -821,67 +858,91 @@
 
     function loadCategoriesFromSheet(cats) {
       if (!cats) return;
+
       cats.forEach(function(c) {
         var key = c['Ключ'] || c['key'];
         var name = c['Название'] || c['name'];
-        if (key && name) {
-          // Skip base categories (they already exist)
-          var baseNames = Object.values(baseCategories).map(b => b.name);
-          if (baseNames.includes(name)) return;
-          // Skip if category with this name already exists
-          var existingKey = Object.keys(categories).find(k => categories[k].name === name);
-          if (!existingKey) {
-            addCategoryToUI(key, name);
-          }
+        var color = c['Цвет'] || c['color'] || '#999999';
+
+        if (!key || !name) return;
+
+        // Базовые категории не заменяем данными из таблицы.
+        var baseNames = Object.values(baseCategories).map(function(b) { return b.name; });
+        if (baseNames.includes(name)) return;
+
+        // Если категория уже есть локально, серверные данные являются источником истины
+        // для имени и цвета. Это важно: иначе старый localStorage мог перезаписывать цвет.
+        if (categories[key]) {
+          categories[key].name = name;
+          categories[key].color = color;
+          categories[key].bg = color + '22';
+          return;
         }
+
+        // Если ключ другой, но название совпадает, используем существующий ключ.
+        var existingKey = Object.keys(categories).find(function(k) {
+          return categories[k].name === name;
+        });
+
+        if (existingKey) {
+          categories[existingKey].color = color;
+          categories[existingKey].bg = color + '22';
+          return;
+        }
+
+        addCategoryToUI(key, name, color);
       });
-    }
 
-    function normalizeDateValue(value) {
-      if (value === null || value === undefined || value === '') return '';
-
-      // Google Apps Script now returns dates as YYYY-MM-DD strings.
-      // Do NOT pass these strings through new Date(), because that can shift
-      // the calendar day because of UTC/timezone conversion.
-      if (typeof value === 'string') {
-        var match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (match) return match[1] + '-' + match[2] + '-' + match[3];
-
-        // Also accept common Google/date string formats as a fallback.
-        var dmy = value.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})/);
-        if (dmy) {
-          return dmy[3] + '-' + String(dmy[2]).padStart(2, '0') + '-' + String(dmy[1]).padStart(2, '0');
-        }
-      }
-
-      if (value instanceof Date && !isNaN(value.getTime())) {
-        return value.getFullYear() + '-' +
-          String(value.getMonth() + 1).padStart(2, '0') + '-' +
-          String(value.getDate()).padStart(2, '0');
-      }
-
-      return String(value).slice(0, 10);
-    }
-
-    function normalizeTimeValue(value) {
-      if (value === null || value === undefined || value === '') return '';
-      var str = String(value);
-      var iso = str.match(/T(\d{2}):(\d{2})/);
-      if (iso) return iso[1] + ':' + iso[2];
-      var simple = str.match(/(\d{1,2}):(\d{2})/);
-      if (simple) return String(simple[1]).padStart(2, '0') + ':' + simple[2];
-      return str;
+      saveCategoriesToStorage();
+      renderCategoryEditor();
     }
 
     function processSheetData(sheetEvents) {
+      // Google Sheets является единственным источником истины для событий.
+      // Если таблица пустая, календарь тоже должен стать пустым.
+      // Локальные события здесь не сохраняем и не подмешиваем.
       var incomingEvents = Array.isArray(sheetEvents) ? sheetEvents : [];
       console.log('Processing', incomingEvents.length, 'events from sheet');
 
-      // Google Sheets is the source of truth. Replace the local list with
-      // exactly what the server returned.
-      events = incomingEvents.map(function(e) {
-        var id = String(e['ID'] || '').trim();
-        if (!id) id = 'sheet_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      // Полностью заменяем текущий список данными из таблицы.
+      events = [];
+
+      incomingEvents.forEach(function(e) {
+        var id = String(e['ID'] || '');
+        var title = e['Название'] || '';
+        var dateStr = '';
+        if (e['Дата']) {
+          var d = new Date(e['Дата']);
+          var offset = d.getTimezoneOffset() * 60000;
+          var localDate = new Date(d.getTime() + offset);
+          dateStr = localDate.getFullYear() + '-' +
+                    String(localDate.getMonth()+1).padStart(2,'0') + '-' +
+                    String(localDate.getDate()).padStart(2,'0');
+        }
+
+        var timeStr = '';
+        if (e['Время начала']) {
+          var timeStrRaw = String(e['Время начала']);
+          var timeMatch = timeStrRaw.match(/T(\d{2}):(\d{2}):/);
+          if (timeMatch) {
+            timeStr = timeMatch[1] + ':' + timeMatch[2];
+          } else {
+            var simpleMatch = timeStrRaw.match(/(\d{2}):(\d{2})/);
+            if (simpleMatch) timeStr = simpleMatch[1] + ':' + simpleMatch[2];
+          }
+        }
+
+        var timeEndStr = '';
+        if (e['Время окончания']) {
+          var teRaw = String(e['Время окончания']);
+          var teMatch = teRaw.match(/T(\d{2}):(\d{2}):/);
+          if (teMatch) {
+            timeEndStr = teMatch[1] + ':' + teMatch[2];
+          } else {
+            var teSimple = teRaw.match(/(\d{2}):(\d{2})/);
+            if (teSimple) timeEndStr = teSimple[1] + ':' + teSimple[2];
+          }
+        }
 
         var cat = 'other';
         var catMap = {
@@ -895,80 +956,78 @@
         if (e['Категория'] && catMap[e['Категория']]) {
           cat = catMap[e['Категория']];
         } else if (e['Категория']) {
+          // Кастомная категория
           cat = e['Категория'];
         }
 
-        return {
-          id: id,
+        var newEvent = {
+          id: id || Date.now() + Math.random(),
           title: e['Название'] || '',
-          date: normalizeDateValue(e['Дата']),
-          time: normalizeTimeValue(e['Время начала']),
-          timeEnd: normalizeTimeValue(e['Время окончания']),
+          date: dateStr,
+          time: timeStr,
+          timeEnd: timeEndStr,
           category: cat,
           place: e['Место'] || '',
           author: e['Автор'] || 'Я',
           desc: e['Описание'] || e['Заметки'] || ''
         };
+
+        events.push(newEvent);
       });
 
       renderCalendar();
       if (document.getElementById('view-ideas').classList.contains('active')) {
         renderIdeas();
       }
-      console.log('Total events after server sync:', events.length);
+      console.log('Total events after merge:', events.length);
     }
 
     function loadFromSheet() {
       if (!isGasReady()) {
-        console.log('Google Sheets не настроен');
-        return;
+        console.log('Google Sheets не настроен'); return;
       }
-
       const btn = document.getElementById('syncBtn');
       if (btn) btn.classList.add('spin');
 
       const callbackName = 'cb_' + Date.now();
-      const script = document.createElement('script');
-      let finished = false;
-
-      function finish() {
-        if (finished) return;
-        finished = true;
-        delete window[callbackName];
-        if (script.parentNode) document.head.removeChild(script);
-        if (btn) btn.classList.remove('spin');
-      }
 
       window[callbackName] = function(data) {
-        if (data && data.success === false) {
-          console.error('Server error:', data.error || 'Unknown server error');
-          finish();
+        delete window[callbackName];
+        if (script && script.parentNode) document.head.removeChild(script);
+        if (btn) btn.classList.remove('spin');
+
+        if (data.error) {
+          console.error('Server error:', data.error);
           return;
         }
-
-        if (data && Array.isArray(data.events)) {
+        if (data.events) {
           processSheetData(data.events);
         }
-        if (data && Array.isArray(data.categories)) {
+        if (data.categories) {
           loadCategoriesFromSheet(data.categories);
         }
-        finish();
       };
 
-      script.src = GAS_URL + '?action=get&callback=' + encodeURIComponent(callbackName);
+      const script = document.createElement('script');
+      script.src = GAS_URL + '?action=get&callback=' + callbackName;
+
       script.onerror = function() {
-        console.error('Failed to load data from Google Sheets');
-        finish();
+        delete window[callbackName];
+        if (script && script.parentNode) document.head.removeChild(script);
+        if (btn) btn.classList.remove('spin');
+        console.error('Failed to load data');
       };
-
-      document.head.appendChild(script);
 
       setTimeout(function() {
-        if (!finished) {
+        if (window[callbackName]) {
+          delete window[callbackName];
+          if (script && script.parentNode) document.head.removeChild(script);
+          if (btn) btn.classList.remove('spin');
           console.error('Load timeout');
-          finish();
         }
       }, 10000);
+
+      document.head.appendChild(script);
     }
 
     function saveToServer(ev) {
@@ -983,86 +1042,56 @@
         other: 'Другое'
       };
 
-      var categoryName = catNameMap[ev.category] || (categories[ev.category] ? categories[ev.category].name : ev.category);
-      var callbackName = 'save_cb_' + Date.now();
-      var script = document.createElement('script');
-      var finished = false;
+      var categoryName = catNameMap[ev.category] || categories[ev.category]?.name || ev.category;
 
-      function finish() {
-        if (finished) return;
-        finished = true;
-        delete window[callbackName];
-        if (script.parentNode) document.head.removeChild(script);
-      }
-
+      const callbackName = 'save_cb_' + Date.now();
       window[callbackName] = function(data) {
-        if (data && data.success) {
-          // The server can return the final ID. Keep it on the local object.
-          if (data.id !== undefined && data.id !== null) {
-            ev.id = String(data.id);
-          }
-          console.log('Saved successfully:', data);
-        } else {
-          console.error('Save failed:', data && data.error ? data.error : data);
-          alert('Не удалось сохранить событие в Google Таблицу. Проверьте интернет и нажмите синхронизацию.');
-        }
-        finish();
+        delete window[callbackName];
+        if (script && script.parentNode) document.head.removeChild(script);
+        console.log('Saved:', data);
       };
+
+      const script = document.createElement('script');
 
       var params = [];
       params.push('action=update');
       params.push('callback=' + encodeURIComponent(callbackName));
-      params.push('id=' + encodeURIComponent(String(ev.id || '')));
-      params.push('title=' + encodeURIComponent(ev.title || ''));
+      params.push('id=' + encodeURIComponent(String(ev.id)));
+      params.push('title=' + encodeURIComponent(ev.title));
       params.push('date=' + encodeURIComponent(ev.date || ''));
       params.push('time=' + encodeURIComponent(ev.time || ''));
       params.push('timeEnd=' + encodeURIComponent(ev.timeEnd || ''));
-      params.push('category=' + encodeURIComponent(categoryName || 'Другое'));
+      params.push('category=' + encodeURIComponent(categoryName));
       params.push('place=' + encodeURIComponent(ev.place || ''));
       params.push('author=' + encodeURIComponent(ev.author || 'Я'));
       params.push('desc=' + encodeURIComponent(ev.desc || ''));
 
       script.src = GAS_URL + '?' + params.join('&');
       script.onerror = function() {
-        console.error('Save request failed');
-        alert('Не удалось связаться с Google Таблицей. Событие пока осталось на экране, но сервер его не подтвердил.');
-        finish();
+        delete window[callbackName];
+        if (script.parentNode) document.head.removeChild(script);
+        console.error('Save failed');
       };
 
       document.head.appendChild(script);
-
-      setTimeout(function() {
-        if (!finished) {
-          console.error('Save timeout');
-          alert('Google Таблица не ответила на сохранение. Проверьте синхронизацию позже.');
-          finish();
-        }
-      }, 10000);
     }
 
     function deleteFromServer(id) {
       if (!isGasReady()) return;
 
       const callbackName = 'del_cb_' + Date.now();
-      const script = document.createElement('script');
-      let finished = false;
-
-      function finish() {
-        if (finished) return;
-        finished = true;
-        delete window[callbackName];
-        if (script.parentNode) document.head.removeChild(script);
-      }
-
       window[callbackName] = function(data) {
-        if (!data || !data.success) {
-          console.error('Delete failed:', data && data.error ? data.error : data);
-        }
-        finish();
+        delete window[callbackName];
+        if (script && script.parentNode) document.head.removeChild(script);
       };
 
-      script.src = GAS_URL + '?action=delete&callback=' + encodeURIComponent(callbackName) + '&id=' + encodeURIComponent(String(id));
-      script.onerror = finish;
+      const script = document.createElement('script');
+      script.src = GAS_URL + '?action=delete&callback=' + callbackName + '&id=' + encodeURIComponent(id);
+      script.onerror = function() {
+        delete window[callbackName];
+        if (script.parentNode) document.head.removeChild(script);
+      };
+
       document.head.appendChild(script);
     }
 
@@ -1550,7 +1579,7 @@
         }
       } else {
         const newEvent = {
-          id: String(Date.now()),
+          id: Date.now(),
           title, date, time, timeEnd, place,
           author: selectedAuthor,
           category: selectedCategory,
@@ -1906,8 +1935,9 @@
           const emoji = baseCategories[key] ? catOption.textContent.match(/^[^\s]+/) : '✨';
           catOption.textContent = emoji + ' ' + newName;
         }
-        // Save to localStorage
+        // Save locally and to Google Sheets
         saveCategoriesToStorage();
+        saveCategoryChangesToServer(key);
         // Re-render ideas if visible
         if (document.getElementById('view-ideas').classList.contains('active')) {
           renderIdeas();
@@ -1939,8 +1969,9 @@
         // Update hidden color input in editor
         const colorInput = document.querySelector(`.cat-editor-item[data-cat-key="${key}"] .cat-editor-color-input`);
         if (colorInput) colorInput.value = color;
-        // Save to localStorage
+        // Save locally and to Google Sheets
         saveCategoriesToStorage();
+        saveCategoryChangesToServer(key);
         // Re-render ideas and calendar
         if (document.getElementById('view-ideas').classList.contains('active')) {
           renderIdeas();
@@ -2005,7 +2036,7 @@
       // Save to localStorage
       saveCategoriesToStorage();
       // Save to server
-      saveCategoryToServer(key, name);
+      saveCategoryToServer(key, name, color);
       // Clear input and re-render editor
       document.getElementById('newCatName').value = '';
       renderCategoryEditor();
