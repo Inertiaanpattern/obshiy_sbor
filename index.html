@@ -818,7 +818,7 @@
 
       script = document.createElement('script');
       var params = [];
-      params.push('action=addCategory');
+      params.push('action=' + (arguments.length > 3 ? arguments[3] : 'addCategory'));
       params.push('callback=' + encodeURIComponent(callbackName));
       params.push('key=' + encodeURIComponent(key));
       params.push('name=' + encodeURIComponent(name));
