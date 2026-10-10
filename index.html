@@ -1761,7 +1761,7 @@ const paletteColors = [
       const cat = categories[ev.category] || categories.other;
       const timeRange = ev.time ? (ev.timeEnd ? ev.time + '–' + ev.timeEnd : ev.time) : '';
       const dateText = ev.date ? formatDate(ev.date) : 'Без даты';
-      const shareText = '📅 Общий сбор\n' +
+      const shareText = 'Общий сбор\n' +
         (cat.name ? cat.name + '\n' : '') +
         '✨ ' + ev.title + '\n' +
         '📅 ' + dateText +
