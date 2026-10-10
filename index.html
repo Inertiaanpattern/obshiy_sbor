@@ -175,35 +175,11 @@
     
 
     .ideas-list { flex: 1; overflow-y: auto; padding: 8px 12px; -webkit-overflow-scrolling: touch; }
-    .idea-card-actions {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 6px;
-      position: absolute;
-      right: 10px;
-      bottom: 10px;
-      z-index: 6;
-    }
-    .event-like {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      min-height: 32px;
-      border: 0;
-      background: rgba(255,255,255,.75);
-      color: #8c6873;
-      border-radius: 999px;
-      padding: 5px 9px;
-      cursor: pointer;
-      font-size: 14px;
-      line-height: 1.2;
-      position: relative;
-      z-index: 1;
-    }
-    .event-like.liked { color: #a33c5b; background: #f9e4e9; }
-    .event-like span { font-size: 12px; margin-left: 2px; }
+    .idea-card-actions { display:flex; align-items:center; gap:8px; position:absolute; right:10px; bottom:10px; }
+    .event-like { border:0; background:rgba(255,255,255,.75); color:#8c6873; border-radius:999px; padding:5px 9px; cursor:pointer; font-size:14px; line-height:1.2; }
+    .event-like.liked { color:#a33c5b; background:#f9e4e9; }
+    .event-like.pending { opacity:.8; }
+    .event-like span { font-size:12px; margin-left:2px; }
     .idea-card { position:relative;
       border-radius: 10px; padding: 12px 12px 38px; margin-bottom: 8px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer;
@@ -241,23 +217,17 @@
     .idea-time { font-size: 10px; color: #888; margin-top: 2px; }
     .idea-author { font-size: 10px; color: #999; margin-top: 4px; }
     .delete-btn {
-      position: static;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex: 0 0 28px;
-      width: 28px;
-      height: 32px;
-      background: transparent;
+      position: absolute;
+      right: 6px;
+      bottom: 6px;
+      background: none;
       border: none;
-      font-size: 22px;
-      line-height: 1;
+      font-size: 13px;
       cursor: pointer;
-      padding: 0;
-      margin: 0;
-      opacity: 0.55;
+      padding: 2px;
+      opacity: 0.4;
       transition: opacity 0.2s;
-      z-index: 1;
+      z-index: 5;
     }
     .delete-btn:hover { opacity: 0.8; }
     .idea-card.past .delete-btn { display: none; }
@@ -1228,6 +1198,10 @@
 
       const calendarBody = document.getElementById('calendarBody');
       calendarBody.innerHTML = '';
+      // В режиме месяца все недели должны помещаться в календарь.
+      calendarBody.style.display = 'grid';
+      calendarBody.style.gridTemplateRows = `repeat(${Math.ceil((startDayOfWeek + daysInMonth) / 7)}, minmax(0, 1fr))`;
+      calendarBody.style.flexDirection = '';
 
       let currentDay = 1 - startDayOfWeek;
       const today = new Date();
@@ -1267,10 +1241,6 @@
               const timeRange = ev.time ? (ev.timeEnd ? `${ev.time}–${ev.timeEnd}` : ev.time) : '';
               var pastClass = isEventPast(ev) ? ' past' : '';
               const catStyle = getCatStyle(cat);
-        const likes = eventLikes[String(idea.id)] || [];
-        const myLike = likes.includes(getLikeUser());
-        const safeId = String(idea.id).replace(/'/g, "\\'");
-        const likesHtml = `<button class="event-like ${myLike ? 'liked' : ''}" onclick="event.stopPropagation(); toggleEventLike('${safeId}')" title="${likes.length ? 'Лайкнули: ' + escapeHtml(likes.join(', ')) : 'Поставить лайк'}" aria-label="Лайк">♥ <span>${likes.length}</span></button>`;
             eventsHtml += `<div class="event-chip ${cat.class}${pastClass}" ${catStyle} title="${ev.title}${ev.place ? ' — ' + ev.place : ''}${ev.time ? ' (' + ev.time + (ev.timeEnd ? '–' + ev.timeEnd : '') + ')' : ''}" onclick="event.stopPropagation(); openEditModalById('${ev.id}')">${ev.time ? `<b>${ev.time}${ev.timeEnd ? '–'+ev.timeEnd : ''}</b><br>` : ''}${ev.title}</div>`;
             });
             if (dayEvents.length > maxEvents) {
@@ -1384,6 +1354,8 @@
 
     function renderWeekView() {
       var calendarBody = document.getElementById('calendarBody');
+      calendarBody.style.display = 'flex';
+      calendarBody.style.gridTemplateRows = '';
       calendarBody.innerHTML = '';
       var year = currentDate.getFullYear();
       var month = currentDate.getMonth();
@@ -1432,6 +1404,8 @@
 
     function renderYearView() {
       var calendarBody = document.getElementById('calendarBody');
+      calendarBody.style.display = 'flex';
+      calendarBody.style.gridTemplateRows = '';
       calendarBody.innerHTML = '';
       var year = currentDate.getFullYear();
       document.getElementById('monthTitle').textContent = year;
@@ -1542,24 +1516,55 @@
     function getLikeUser() {
       return String(localStorage.getItem('lastAuthor') || selectedAuthor || 'Я').trim() || 'Я';
     }
+    const likesPending = new Set();
     function toggleEventLike(eventId) {
       if (!isGasReady()) { alert('Не удалось подключиться к синхронизации. Попробуйте позже.'); return; }
-      const callbackName = 'like_cb_' + Date.now();
-      window[callbackName] = function(data) {
+      const id = String(eventId);
+      if (likesPending.has(id)) return;
+      const user = getLikeUser();
+      const previousUsers = Array.isArray(eventLikes[id]) ? [...eventLikes[id]] : [];
+      const wasLiked = previousUsers.includes(user);
+      eventLikes[id] = wasLiked ? previousUsers.filter(name => name !== user) : [...previousUsers, user];
+      likesPending.add(id);
+      renderIdeas();
+
+      const callbackName = 'like_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+      let finished = false;
+      const script = document.createElement('script');
+      const finish = function() {
+        if (finished) return;
+        finished = true;
         delete window[callbackName];
-        if (script.parentNode) document.head.removeChild(script);
-        if (!data || !data.success) { alert('Не удалось сохранить лайк. Попробуйте ещё раз.'); return; }
-        eventLikes[String(eventId)] = Array.isArray(data.users) ? data.users : [];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        likesPending.delete(id);
+      };
+      window[callbackName] = function(data) {
+        finish();
+        if (!data || !data.success) {
+          eventLikes[id] = previousUsers;
+          renderIdeas();
+          alert('Не удалось сохранить лайк. Попробуйте ещё раз.');
+          return;
+        }
+        eventLikes[id] = Array.isArray(data.users) ? data.users : [];
         renderIdeas();
       };
-      const script = document.createElement('script');
       script.src = GAS_URL + '?action=toggleLike&callback=' + encodeURIComponent(callbackName) +
-        '&eventId=' + encodeURIComponent(String(eventId)) + '&user=' + encodeURIComponent(getLikeUser());
+        '&eventId=' + encodeURIComponent(id) + '&user=' + encodeURIComponent(user);
       script.onerror = function() {
-        delete window[callbackName];
-        if (script.parentNode) document.head.removeChild(script);
+        finish();
+        eventLikes[id] = previousUsers;
+        renderIdeas();
         alert('Не удалось сохранить лайк. Проверьте соединение.');
       };
+      setTimeout(function() {
+        if (window[callbackName]) {
+          finish();
+          eventLikes[id] = previousUsers;
+          renderIdeas();
+          alert('Ответ сервера задерживается. Проверьте соединение и попробуйте ещё раз.');
+        }
+      }, 12000);
       document.head.appendChild(script);
     }
 
@@ -1574,7 +1579,7 @@
         const likes = eventLikes[String(idea.id)] || [];
         const myLike = likes.includes(getLikeUser());
         const safeId = String(idea.id).replace(/'/g, "\\'");
-        const likesHtml = `<button class="event-like ${myLike ? 'liked' : ''}" onclick="event.stopPropagation(); toggleEventLike('${safeId}')" title="${likes.length ? 'Лайкнули: ' + escapeHtml(likes.join(', ')) : 'Поставить лайк'}" aria-label="Лайк">♥ <span>${likes.length}</span></button>`;
+        const likesHtml = `<button class="event-like ${myLike ? 'liked' : ''} ${likesPending.has(String(idea.id)) ? 'pending' : ''}" onclick="event.stopPropagation(); toggleEventLike('${safeId}')" title="${likes.length ? 'Лайкнули: ' + escapeHtml(likes.join(', ')) : 'Поставить лайк'}" aria-label="Лайк">♥ <span>${likes.length}</span></button>`;
         return `
           <div class="idea-card ${cat.class} ${pastClass}" onclick="openEditModalById('${idea.id}')" data-id="${idea.id}" ${catStyle}>
             <div class="idea-title">${escapeHtml(idea.title)}</div>
