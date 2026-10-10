@@ -518,6 +518,59 @@
       display: flex; gap: 8px; align-items: center; margin-top: 12px;
       padding-top: 12px; border-top: 1px solid #eee;
     }
+
+
+    /* === ЕДИНАЯ ТЕМА «ОБЩИЙ СБОР» === */
+    :root {
+      --wine: #512b3a;
+      --wine-deep: #3b1d2a;
+      --wine-soft: #704653;
+      --beige: #f3e8df;
+      --beige-light: #fbf6f1;
+      --gold: #b8955b;
+      --ink: #3f3034;
+      --muted: #8b7779;
+      --line: #e8d9cf;
+    }
+    html, body { background: var(--wine) !important; color: var(--ink); }
+    #app { background: var(--wine) !important; }
+    .header, .month-nav, .view-switcher { background: var(--wine) !important; border-color: rgba(243,232,223,.18) !important; }
+    .header h1 { color: var(--beige); }
+    .month-title { color: var(--beige) !important; }
+    .month-nav button { color: #e3c99c !important; }
+    #view-calendar { background: var(--beige) !important; margin: 0 8px; border-radius: 18px; overflow: hidden; }
+    .weekdays-header { background: #eadbd0 !important; border-color: var(--line) !important; }
+    .weekday-label { color: #715b5d !important; }
+    .week-row { border-color: #e9dbd1 !important; }
+    .day-cell { border-color: #e9dbd1 !important; }
+    .day-cell:hover { background: rgba(184,149,91,.13) !important; }
+    .day-number { color: #49373b; }
+    .day-cell.today .day-number, .day-cell.selected .day-number { background: var(--wine) !important; color: #fff7ed !important; }
+    .view-btn { border-color: rgba(243,232,223,.38) !important; color: var(--beige) !important; border-radius: 12px !important; }
+    .view-btn.active { background: var(--gold) !important; border-color: var(--gold) !important; color: #fff !important; }
+    .bottom-nav { background: var(--wine-deep) !important; border-top: 1px solid rgba(243,232,223,.15) !important; }
+    .nav-tab { width: 56px; height: 48px; padding: 0 !important; justify-content: center; color: #cbb8b8 !important; }
+    .nav-tab.active { color: #e4c58c !important; }
+    .nav-tab .icon { width: 24px !important; height: 24px !important; display: flex; align-items: center; justify-content: center; font-size: 24px !important; line-height: 1 !important; }
+    .nav-tab .icon svg { display: block; width: 24px !important; height: 24px !important; }
+    .nav-tab .label { display: none !important; }
+    .refresh-btn { color: #e4c58c !important; background: rgba(255,255,255,.08) !important; box-shadow: none !important; width: 40px; height: 40px; }
+    .btn-add { background: var(--gold) !important; box-shadow: none !important; border-radius: 14px !important; }
+    .modal-overlay, .cat-editor-overlay { background: rgba(28,13,20,.62) !important; }
+    .modal-sheet, .cat-editor-sheet { background: var(--beige-light) !important; border-radius: 22px 22px 0 0 !important; }
+    .modal-title, .form-label, .cat-editor-title { color: var(--wine) !important; }
+    .form-input, .form-textarea, .form-select { background: #fffaf6 !important; border-color: #dfcfc4 !important; color: var(--ink) !important; border-radius: 12px !important; }
+    .filter-chip { border-radius: 14px !important; }
+    .idea-card, .event-card, .month-card, .cat-editor-item { border-radius: 14px !important; }
+    .delete-btn, .cat-editor-action { color: var(--wine) !important; font-size: 22px !important; line-height: 1 !important; font-weight: 400 !important; }
+    .delete-btn { min-width: 28px; min-height: 28px; }
+    .cat-editor-action { width: 30px; height: 30px; }
+    .ideas-list { background: transparent !important; }
+    @media (max-width: 600px) {
+      #view-calendar { margin: 0 5px; border-radius: 15px; }
+      .nav-tab { width: 52px; }
+    }
+
   </style>
   <!-- === КОНЕЦ CSS === -->
 <base target="_blank">
@@ -527,7 +580,7 @@
 <body>
   <div id="app">
     <div class="header">
-      <h1>📅</h1>
+      <h1 aria-label="Общий сбор"></h1>
       <div class="header-actions">
         <button class="btn-add" onclick="openModal()">+ Добавить</button>
       </div>
@@ -581,7 +634,7 @@
         </svg>
       </button>
       <button class="nav-tab" onclick="switchView('ideas')" id="tab-ideas">
-        <span class="icon" style="font-size:24px;">📌</span>
+        <span class="icon nav-icon-svg"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.75 5.58 6.16.9-4.46 4.35 1.05 6.14L12 17.07l-5.5 2.9 1.05-6.14L3.1 9.48l6.16-.9L12 3Z"/></svg></span>
       </button>
     </div>
   </div>
@@ -1449,7 +1502,7 @@
         const timeRange = idea.time ? (idea.timeEnd ? `${idea.time}–${idea.timeEnd}` : idea.time) : '';
         const isPast = idea.date && isEventPast(idea);
         const pastClass = isPast ? 'past' : '';
-        const deleteBtn = !isPast ? `<button class="delete-btn" onclick="event.stopPropagation(); deleteEventById('${idea.id}')" title="Удалить">🗑️</button>` : '';
+        const deleteBtn = !isPast ? `<button class="delete-btn" onclick="event.stopPropagation(); deleteEventById('${idea.id}')" title="Удалить" aria-label="Удалить">×</button>` : '';
         const catStyle = getCatStyle(cat);
         return `
           <div class="idea-card ${cat.class} ${pastClass}" onclick="openEditModalById('${idea.id}')" data-id="${idea.id}" ${catStyle}>
@@ -1746,7 +1799,7 @@
       const cat = categories[ev.category] || categories.other;
       const timeRange = ev.time ? (ev.timeEnd ? ev.time + '–' + ev.timeEnd : ev.time) : '';
       const dateText = ev.date ? formatDate(ev.date) : 'Без даты';
-      const shareText = '📅 Туда-сюда\n' +
+      const shareText = '✨ Общий сбор\n' +
         (cat.name ? cat.name + '\n' : '') +
         '✨ ' + ev.title + '\n' +
         '📅 ' + dateText +
@@ -1941,7 +1994,7 @@
               onchange="updateCategoryName('${key}', this.value)"
               onkeydown="if(event.key==='Enter'){this.blur();updateCategoryName('${key}',this.value);}">
             <div class="cat-editor-actions">
-              ${!isBase ? `<button class="cat-editor-action" onclick="deleteCategory('${key}')" title="Удалить">🗑️</button>` : ''}
+              ${!isBase ? `<button class="cat-editor-action" onclick="deleteCategory('${key}')" title="Удалить" aria-label="Удалить">×</button>` : ''}
             </div>
           </div>
         `;
