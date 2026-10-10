@@ -6,14 +6,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Общий сбор">
-  <title>Общий сбор</title>
+  <meta name="apple-mobile-web-app-title" content="Туда-сюда">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180x180.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="apple-touch-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="apple-touch-icon-120x120.png">
+  <link rel="apple-touch-icon" sizes="76x76" href="apple-touch-icon-76x76.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <title>Туда-сюда</title>
   <meta name="description" content="Календарь планов и идей">
-  <meta property="og:title" content="Общий сбор">
+  <meta property="og:title" content="Туда-сюда">
   <meta property="og:description" content="Посмотри, что запланировано!">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="IMG_5938.png">
-  <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoi0J7QsdGJ0LjQuSDRgdCx0L7RgCIsInNob3J0X25hbWUiOiLQntCx0YnQuNC5INGB0LHQvtGAIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmMGYwZjAiLCJ0aGVtZV9jb2xvciI6IiM2NjdlZWEifQ==">
+  <meta property="og:image" content="https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f4c5.png">
+  <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoi0KLQvtGA0LPQvtC90YsiLCJzaG9ydF9uYW1lIjoi0KLQvtGA0LPQvtC90YsiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2YwZjBmMCIsInRoZW1lX2NvbG9yIjoiIzY2N2VlYSJ9">
 
   <!-- ============================================ -->
   <!-- === CSS === -->
@@ -44,8 +49,6 @@
       min-height: 44px;
     }
     .header h1 { font-size: 16px; font-weight: 700; color: #333; }
-    .app-brand { display: flex; align-items: center; gap: 8px; }
-    .app-brand img { width: 30px; height: 30px; object-fit: contain; border-radius: 7px; }
     .header-actions { display: flex; gap: 6px; align-items: center; }
     .btn-add { display: none; }
     .view-ideas-active .btn-add { display: block; }
@@ -220,8 +223,7 @@
       transition: opacity 0.2s;
       z-index: 5;
     }
-    .delete-btn:hover { opacity: 1; color: #d64545; }
-    .delete-btn svg, .cat-editor-action svg { display: block; width: 18px; height: 18px; }
+    .delete-btn:hover { opacity: 0.8; }
     .idea-card.past .delete-btn { display: none; }
 
     .empty-state { text-align: center; padding: 40px 16px; color: #aaa; }
@@ -409,7 +411,6 @@
     @media (min-width: 769px) {
       .header { padding: 8px 16px; padding-top: max(8px, env(safe-area-inset-top)); }
       .header h1 { font-size: 17px; }
-      .app-brand img { width: 32px; height: 32px; }
       .btn-add { font-size: 13px; padding: 7px 14px; }
       .btn-sync { width: 44px; height: 44px; }
       .btn-sync svg { width: 28px; height: 28px; }
@@ -505,7 +506,6 @@
       padding: 4px; border-radius: 6px; opacity: 0.6; transition: opacity 0.2s;
     }
     .cat-editor-action:hover { opacity: 1; background: rgba(0,0,0,0.05); }
-    .cat-editor-action { display: inline-flex; align-items: center; justify-content: center; color: #7b8494; }
     .cat-editor-color {
       position: relative; overflow: hidden; border-radius: 50%; flex-shrink: 0;
     }
@@ -527,7 +527,7 @@
 <body>
   <div id="app">
     <div class="header">
-      <h1 class="app-brand"><img src="IMG_5938.png" alt="Логотип «Общий сбор»"><span>Общий сбор</span></h1>
+      <h1>📅</h1>
       <div class="header-actions">
         <button class="btn-add" onclick="openModal()">+ Добавить</button>
       </div>
@@ -634,7 +634,7 @@
         <label class="form-label">Кто добавляет</label>
         <div class="author-options">
           <div class="author-option selected" data-author="Я" onclick="selectAuthor(this)">👤 Я</div>
-          <div class="author-option" data-author="Hamster" onclick="selectAuthor(this)">🐹 Hamster</div>
+          <div class="author-option" data-author="Настя" onclick="selectAuthor(this)">👤 Настя</div>
         </div>
       </div>
 
@@ -828,21 +828,76 @@
     function loadCategoriesFromSheet(cats) {
       if (!cats) return;
       cats.forEach(function(c) {
-        var key = c['Ключ'] || c['key'];
-        var name = c['Название'] || c['name'];
-        if (key && name) {
-          // Skip base categories (they already exist)
-          var baseNames = Object.values(baseCategories).map(b => b.name);
-          if (baseNames.includes(name)) return;
-          // Skip if category with this name already exists
-          var existingKey = Object.keys(categories).find(k => categories[k].name === name);
-          if (!existingKey) {
-            var color = c['Цвет'] || c['color'] || '#455a64';
-            var bg = c['Фон'] || c['background'] || (color + '18');
-            addCategoryToUI(key, name, color, bg);
+        var key = String(c['Ключ'] || c['key'] || '').trim();
+        var name = String(c['Название'] || c['name'] || '').trim();
+        if (!key || !name) return;
+
+        // Таблица — источник истины для пользовательских категорий и их цветов.
+        // Сначала ищем по ключу, затем по имени для совместимости со старыми строками.
+        var existingKey = categories[key] ? key : Object.keys(categories).find(function(k) {
+          return categories[k].name === name;
+        });
+        if (baseCategories[key] || Object.keys(baseCategories).some(function(k) {
+          return baseCategories[k].name === name;
+        })) return;
+
+        var color = String(c['Цвет'] || c['color'] || (existingKey && categories[existingKey].color) || '#455a64').trim();
+        var bg = String(c['Фон'] || c['background'] || (color + '22')).trim();
+        var targetKey = existingKey || key;
+        if (categories[targetKey]) {
+          categories[targetKey].name = name;
+          categories[targetKey].class = 'cat-custom';
+          categories[targetKey].color = color;
+          categories[targetKey].bg = bg;
+          var option = document.querySelector('.cat-option[data-cat="' + targetKey + '"]');
+          if (option) {
+            option.textContent = name;
+            option.style.background = bg;
+            option.style.color = color;
+            option.style.borderColor = color + '55';
+          } else {
+            addCategoryToUI(targetKey, name, color, bg);
           }
+          var chip = document.querySelector('.filter-chip[data-filter="' + targetKey + '"]');
+          if (chip) {
+            chip.textContent = name;
+            chip.style.background = bg;
+            chip.style.color = color;
+            chip.style.borderColor = color + '44';
+          }
+        } else {
+          addCategoryToUI(targetKey, name, color, bg);
         }
       });
+      saveCategoriesToStorage();
+    }
+
+    function saveCategoryChangesToServer(key) {
+      if (!isGasReady() || !categories[key]) return;
+      var callbackName = 'cat_update_cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+      var script = document.createElement('script');
+      window[callbackName] = function(data) {
+        delete window[callbackName];
+        if (script.parentNode) document.head.removeChild(script);
+        if (!data || data.success === false || data.error) {
+          console.error('Не удалось сохранить категорию:', data && data.error ? data.error : data);
+        }
+      };
+      var params = [
+        'action=updateCategory',
+        'callback=' + encodeURIComponent(callbackName),
+        'key=' + encodeURIComponent(key),
+        'name=' + encodeURIComponent(categories[key].name),
+        'color=' + encodeURIComponent(categories[key].color || '#455a64'),
+        'background=' + encodeURIComponent(categories[key].bg || '')
+      ];
+      script.onerror = function() {
+        delete window[callbackName];
+        if (script.parentNode) document.head.removeChild(script);
+        console.error('Ошибка запроса сохранения цвета категории');
+      };
+      script.src = GAS_URL + '?' + params.join('&');
+      document.head.appendChild(script);
     }
 
     function processSheetData(sheetEvents) {
@@ -1385,7 +1440,7 @@
         const timeRange = idea.time ? (idea.timeEnd ? `${idea.time}–${idea.timeEnd}` : idea.time) : '';
         const isPast = idea.date && isEventPast(idea);
         const pastClass = isPast ? 'past' : '';
-        const deleteBtn = !isPast ? `<button class="delete-btn" aria-label="Удалить событие" onclick="event.stopPropagation(); deleteEventById('${idea.id}')" title="Удалить"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button>` : '';
+        const deleteBtn = !isPast ? `<button class="delete-btn" onclick="event.stopPropagation(); deleteEventById('${idea.id}')" title="Удалить">🗑️</button>` : '';
         const catStyle = getCatStyle(cat);
         return `
           <div class="idea-card ${cat.class} ${pastClass}" onclick="openEditModalById('${idea.id}')" data-id="${idea.id}" ${catStyle}>
@@ -1682,7 +1737,7 @@
       const cat = categories[ev.category] || categories.other;
       const timeRange = ev.time ? (ev.timeEnd ? ev.time + '–' + ev.timeEnd : ev.time) : '';
       const dateText = ev.date ? formatDate(ev.date) : 'Без даты';
-      const shareText = '📅 Общий сбор\n' +
+      const shareText = '📅 Туда-сюда\n' +
         (cat.name ? cat.name + '\n' : '') +
         '✨ ' + ev.title + '\n' +
         '📅 ' + dateText +
@@ -1877,7 +1932,7 @@
               onchange="updateCategoryName('${key}', this.value)"
               onkeydown="if(event.key==='Enter'){this.blur();updateCategoryName('${key}',this.value);}">
             <div class="cat-editor-actions">
-              ${!isBase ? `<button class="cat-editor-action" aria-label="Удалить категорию" onclick="deleteCategory('${key}')" title="Удалить"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg></button>` : ''}
+              ${!isBase ? `<button class="cat-editor-action" onclick="deleteCategory('${key}')" title="Удалить">🗑️</button>` : ''}
             </div>
           </div>
         `;
@@ -1900,8 +1955,9 @@
           const emoji = baseCategories[key] ? (catOption.textContent.match(/^[^\s]+/) || [''])[0] : '';
           catOption.textContent = emoji ? emoji + ' ' + newName : newName;
         }
-        // Save to localStorage
+        // Save locally and in Google Sheets
         saveCategoriesToStorage();
+        saveCategoryChangesToServer(key);
         // Re-render ideas if visible
         if (document.getElementById('view-ideas').classList.contains('active')) {
           renderIdeas();
@@ -1933,8 +1989,9 @@
         // Update hidden color input in editor
         const colorInput = document.querySelector(`.cat-editor-item[data-cat-key="${key}"] .cat-editor-color-input`);
         if (colorInput) colorInput.value = color;
-        // Save to localStorage
+        // Save locally and in Google Sheets
         saveCategoriesToStorage();
+        saveCategoryChangesToServer(key);
         // Re-render ideas and calendar
         if (document.getElementById('view-ideas').classList.contains('active')) {
           renderIdeas();
