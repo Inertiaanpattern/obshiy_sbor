@@ -600,7 +600,11 @@
     /* Единый тёплый фон для календаря и вкладки идей/избранного */
     #view-ideas {
       background: #f3e8df !important;
-      min-height: 100%;
+      /* Вкладка занимает только свободное место над нижней навигацией */
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      height: auto !important;
+      overflow: hidden !important;
     }
     #view-ideas .ideas-filter,
     #view-ideas .ideas-list,
