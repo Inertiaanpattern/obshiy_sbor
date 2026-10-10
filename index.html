@@ -912,12 +912,21 @@
         var title = e['Название'] || '';
         var dateStr = '';
         if (e['Дата']) {
-          var d = new Date(e['Дата']);
-          var offset = d.getTimezoneOffset() * 60000;
-          var localDate = new Date(d.getTime() + offset);
-          dateStr = localDate.getFullYear() + '-' +
-                    String(localDate.getMonth()+1).padStart(2,'0') + '-' +
-                    String(localDate.getDate()).padStart(2,'0');
+          // Apps Script отдаёт дату в формате YYYY-MM-DD.
+          // Сохраняем её как календарную дату, не прогоняя через UTC:
+          // иначе в некоторых часовых поясах дата сдвигается на день.
+          var rawDate = String(e['Дата']).trim();
+          var isoDateMatch = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (isoDateMatch) {
+            dateStr = isoDateMatch[1] + '-' + isoDateMatch[2] + '-' + isoDateMatch[3];
+          } else {
+            var d = new Date(rawDate);
+            if (!isNaN(d.getTime())) {
+              dateStr = d.getFullYear() + '-' +
+                        String(d.getMonth()+1).padStart(2,'0') + '-' +
+                        String(d.getDate()).padStart(2,'0');
+            }
+          }
         }
 
         var timeStr = '';
