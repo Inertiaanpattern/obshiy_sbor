@@ -175,8 +175,12 @@
     
 
     .ideas-list { flex: 1; overflow-y: auto; padding: 8px 12px; -webkit-overflow-scrolling: touch; }
-    .idea-card {
-      border-radius: 10px; padding: 12px; margin-bottom: 8px;
+    .idea-card-actions { display:flex; align-items:center; gap:8px; position:absolute; right:10px; bottom:10px; }
+    .event-like { border:0; background:rgba(255,255,255,.75); color:#8c6873; border-radius:999px; padding:5px 9px; cursor:pointer; font-size:14px; line-height:1.2; }
+    .event-like.liked { color:#a33c5b; background:#f9e4e9; }
+    .event-like span { font-size:12px; margin-left:2px; }
+    .idea-card { position:relative;
+      border-radius: 10px; padding: 12px 12px 38px; margin-bottom: 8px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer;
       transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
       position: relative;
@@ -958,7 +962,7 @@
       console.log('Processing', sheetEvents.length, 'events from sheet');
       if (!sheetEvents || sheetEvents.length === 0) {
         console.log('No events in sheet, keeping local events');
-        return;
+        renderCalendar(); renderIdeas(); return;
       }
 
       sheetEvents.forEach(function(e) {
@@ -1086,9 +1090,10 @@
         if (data.categories) {
           loadCategoriesFromSheet(data.categories);
         }
+        eventLikes = data.likes || {};
         if (data.events) {
           processSheetData(data.events);
-        }
+        } else { renderIdeas(); }
       };
 
       const script = document.createElement('script');
@@ -1231,6 +1236,10 @@
               const timeRange = ev.time ? (ev.timeEnd ? `${ev.time}–${ev.timeEnd}` : ev.time) : '';
               var pastClass = isEventPast(ev) ? ' past' : '';
               const catStyle = getCatStyle(cat);
+        const likes = eventLikes[String(idea.id)] || [];
+        const myLike = likes.includes(getLikeUser());
+        const safeId = String(idea.id).replace(/'/g, "\\'");
+        const likesHtml = `<button class="event-like ${myLike ? 'liked' : ''}" onclick="event.stopPropagation(); toggleEventLike('${safeId}')" title="${likes.length ? 'Лайкнули: ' + escapeHtml(likes.join(', ')) : 'Поставить лайк'}" aria-label="Лайк">♥ <span>${likes.length}</span></button>`;
             eventsHtml += `<div class="event-chip ${cat.class}${pastClass}" ${catStyle} title="${ev.title}${ev.place ? ' — ' + ev.place : ''}${ev.time ? ' (' + ev.time + (ev.timeEnd ? '–' + ev.timeEnd : '') + ')' : ''}" onclick="event.stopPropagation(); openEditModalById('${ev.id}')">${ev.time ? `<b>${ev.time}${ev.timeEnd ? '–'+ev.timeEnd : ''}</b><br>` : ''}${ev.title}</div>`;
             });
             if (dayEvents.length > maxEvents) {
@@ -1497,6 +1506,32 @@
       return categories[key]?.name || key;
     }
 
+    // Лайки синхронизируются между участниками через Google Sheets.
+    let eventLikes = {};
+    function getLikeUser() {
+      return String(localStorage.getItem('lastAuthor') || selectedAuthor || 'Я').trim() || 'Я';
+    }
+    function toggleEventLike(eventId) {
+      if (!isGasReady()) { alert('Не удалось подключиться к синхронизации. Попробуйте позже.'); return; }
+      const callbackName = 'like_cb_' + Date.now();
+      window[callbackName] = function(data) {
+        delete window[callbackName];
+        if (script.parentNode) document.head.removeChild(script);
+        if (!data || !data.success) { alert('Не удалось сохранить лайк. Попробуйте ещё раз.'); return; }
+        eventLikes[String(eventId)] = Array.isArray(data.users) ? data.users : [];
+        renderIdeas();
+      };
+      const script = document.createElement('script');
+      script.src = GAS_URL + '?action=toggleLike&callback=' + encodeURIComponent(callbackName) +
+        '&eventId=' + encodeURIComponent(String(eventId)) + '&user=' + encodeURIComponent(getLikeUser());
+      script.onerror = function() {
+        delete window[callbackName];
+        if (script.parentNode) document.head.removeChild(script);
+        alert('Не удалось сохранить лайк. Проверьте соединение.');
+      };
+      document.head.appendChild(script);
+    }
+
     function renderIdeasList(ideas, container) {
       container.innerHTML = ideas.map(idea => {
         const cat = categories[idea.category] || categories.other;
@@ -1505,6 +1540,10 @@
         const pastClass = isPast ? 'past' : '';
         const deleteBtn = !isPast ? `<button class="delete-btn" onclick="event.stopPropagation(); deleteEventById('${idea.id}')" title="Удалить" aria-label="Удалить">×</button>` : '';
         const catStyle = getCatStyle(cat);
+        const likes = eventLikes[String(idea.id)] || [];
+        const myLike = likes.includes(getLikeUser());
+        const safeId = String(idea.id).replace(/'/g, "\\'");
+        const likesHtml = `<button class="event-like ${myLike ? 'liked' : ''}" onclick="event.stopPropagation(); toggleEventLike('${safeId}')" title="${likes.length ? 'Лайкнули: ' + escapeHtml(likes.join(', ')) : 'Поставить лайк'}" aria-label="Лайк">♥ <span>${likes.length}</span></button>`;
         return `
           <div class="idea-card ${cat.class} ${pastClass}" onclick="openEditModalById('${idea.id}')" data-id="${idea.id}" ${catStyle}>
             <div class="idea-title">${escapeHtml(idea.title)}</div>
@@ -1515,7 +1554,7 @@
             ${idea.place ? `<div class="idea-place"><a href="https://yandex.ru/maps/?text=${encodeURIComponent(idea.place)}" target="_blank">📍 ${escapeHtml(idea.place)}</a></div>` : ''}
             ${timeRange ? `<div class="idea-time">🕐 ${timeRange}</div>` : ''}
             ${idea.author ? `<div class="idea-author">👤 ${escapeHtml(idea.author)}</div>` : ''}
-            ${deleteBtn}
+            <div class="idea-card-actions">${likesHtml}${deleteBtn}</div>
           </div>
         `;
       }).join('');
