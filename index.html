@@ -921,14 +921,25 @@
         var id = String(e['ID'] || '');
         var title = e['Название'] || '';
         var dateStr = '';
-        if (e['Дата']) {
-          var d = new Date(e['Дата']);
-          var offset = d.getTimezoneOffset() * 60000;
-          var localDate = new Date(d.getTime() + offset);
-          dateStr = localDate.getFullYear() + '-' +
-                    String(localDate.getMonth()+1).padStart(2,'0') + '-' +
-                    String(localDate.getDate()).padStart(2,'0');
-        }
+    if (e['Дата']) {
+  const rawDate = String(e['Дата']).trim();
+  const match = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (match) {
+    // Дата уже имеет формат ГГГГ-ММ-ДД.
+    // Не применяем пересчёт часового пояса.
+    dateStr = match[1] + '-' + match[2] + '-' + match[3];
+  } else {
+    const d = new Date(e['Дата']);
+
+    if (!isNaN(d.getTime())) {
+      dateStr =
+        d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+    }
+  }
+}
 
         var timeStr = '';
         if (e['Время начала']) {
