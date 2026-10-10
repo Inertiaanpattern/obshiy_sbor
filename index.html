@@ -176,6 +176,8 @@
 
     .ideas-list { flex: 1; overflow-y: auto; padding: 8px 12px; -webkit-overflow-scrolling: touch; }
     .idea-card-actions { display:flex; align-items:center; gap:8px; position:absolute; right:10px; bottom:10px; }
+    /* Кнопка удаления внутри панели действий не должна позиционироваться поверх лайка. */
+    .idea-card-actions .delete-btn { position:static; right:auto; bottom:auto; flex:0 0 28px; width:28px; height:28px; min-width:28px; min-height:28px; display:flex; align-items:center; justify-content:center; padding:0; }
     .event-like { border:0; background:rgba(255,255,255,.75); color:#8c6873; border-radius:999px; padding:5px 9px; cursor:pointer; font-size:14px; line-height:1.2; }
     .event-like.liked { color:#a33c5b; background:#f9e4e9; }
     .event-like.pending { opacity:.8; }
