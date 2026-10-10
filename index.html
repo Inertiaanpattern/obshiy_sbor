@@ -2005,25 +2005,73 @@
         alert('Базовые категории нельзя удалить');
         return;
       }
+      if (!categories[key]) return;
       if (!confirm('Удалить категорию "' + categories[key].name + '"? События этой категории станут "Другими". Это действие нельзя отменить.')) return;
-      // Reassign events to 'other'
-      events.forEach(function(ev) {
-        if (ev.category === key) ev.category = 'other';
-      });
-      delete categories[key];
-      // Remove from DOM
-      const catOption = document.querySelector(`.cat-option[data-cat="${key}"]`);
-      if (catOption) catOption.remove();
-      const filterChip = document.querySelector(`.filter-chip[data-filter="${key}"]`);
-      if (filterChip) filterChip.remove();
-      // Save to localStorage
-      saveCategoriesToStorage();
-      // Re-render
-      renderCategoryEditor();
-      if (document.getElementById('view-ideas').classList.contains('active')) {
-        renderIdeas();
+      if (!isGasReady()) {
+        alert('Нет соединения с сервером. Категория не удалена.');
+        return;
       }
-      renderCalendar();
+
+      // Сначала удаляем категорию на сервере. Меняем интерфейс только после подтверждения,
+      // чтобы локальное состояние не расходилось с Google Sheets.
+      var callbackName = 'cat_delete_cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+      var script = document.createElement('script');
+      var finished = false;
+
+      function cleanup() {
+        if (window[callbackName]) delete window[callbackName];
+        if (script && script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      function fail(message) {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        alert(message || 'Не удалось удалить категорию на сервере. Проверь публикацию Google Apps Script. Категория оставлена в приложении.');
+      }
+
+      window[callbackName] = function(data) {
+        if (finished) return;
+        finished = true;
+        cleanup();
+
+        if (!data || data.success !== true || data.action !== 'categoryDeleted') {
+          alert('Сервер не подтвердил удаление категории. Категория оставлена в приложении. Проверь, что опубликована актуальная версия Google Apps Script.');
+          return;
+        }
+
+        // Сервер подтвердил удаление: теперь обновляем локальное состояние.
+        events.forEach(function(ev) {
+          if (ev.category === key || ev.category === (categories[key] && categories[key].name)) {
+            ev.category = 'other';
+            saveToServer(ev);
+          }
+        });
+        delete categories[key];
+
+        const catOption = document.querySelector('.cat-option[data-cat="' + key + '"]');
+        if (catOption) catOption.remove();
+        const filterChip = document.querySelector('.filter-chip[data-filter="' + key + '"]');
+        if (filterChip) filterChip.remove();
+
+        saveCategoriesToStorage();
+        renderCategoryEditor();
+        if (document.getElementById('view-ideas').classList.contains('active')) renderIdeas();
+        renderCalendar();
+      };
+
+      script.onerror = function() {
+        fail('Не удалось связаться с сервером. Категория не удалена.');
+      };
+
+      script.src = GAS_URL + '?action=deleteCategory&callback=' +
+        encodeURIComponent(callbackName) + '&key=' + encodeURIComponent(key) +
+        '&_=' + Date.now();
+      document.head.appendChild(script);
+
+      setTimeout(function() {
+        fail('Сервер не ответил на удаление категории. Категория не удалена в приложении. Проверь публикацию Google Apps Script.');
+      }, 10000);
     }
 
     function addNewCategoryFromEditor() {
